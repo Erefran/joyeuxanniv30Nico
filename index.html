@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Berlin — Nico's 30 🎉</title>
+<meta name="description" content="Le programme du weekend anniversaire à Berlin, 17-19 juillet">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E0E10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BLN30">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root {
+  --bg: #EFEFEC;
+  --surface: #FFFFFF;
+  --surface-2: #F7F7F4;
+  --text: #16161A;
+  --muted: #85857E;
+  --line: #E2E2DD;
+  --acid: #CCFF00;
+  --acid-text: #16161A;
+  --shadow: 0 4px 24px rgba(0,0,0,.10);
+  --radius: 18px;
+}
+html.dark {
+  --bg: #0E0E10;
+  --surface: #1A1A1E;
+  --surface-2: #232328;
+  --text: #F2F2EE;
+  --muted: #8F8F96;
+  --line: #2A2A2E;
+  --shadow: 0 4px 24px rgba(0,0,0,.45);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg); color: var(--text);
+}
+button { font-family: inherit; border: none; cursor: pointer; background: none; color: inherit; }
+
+/* ============ LOADING SCREEN ============ */
+#loader {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #0E0E10; color: #F2F2EE;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 28px; transition: opacity .5s ease;
+}
+#loader.hide { opacity: 0; pointer-events: none; }
+.loader-mark {
+  width: 92px; height: 92px; border-radius: 22px; background: var(--acid);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 30px; color: #0E0E10;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.loader-msg { font-size: 15px; color: #B9B9B2; min-height: 20px; text-align: center; padding: 0 32px; }
+.loader-bar { width: 140px; height: 3px; background: #2A2A2E; border-radius: 3px; overflow: hidden; }
+.loader-bar::after {
+  content: ''; display: block; height: 100%; width: 40%;
+  background: var(--acid); border-radius: 3px;
+  animation: slide 1.2s ease-in-out infinite;
+}
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+
+/* ============ SETUP SCREEN (clé API manquante) ============ */
+#setup {
+  position: fixed; inset: 0; z-index: 900; background: var(--bg);
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+#setup.show { display: flex; }
+.setup-card {
+  max-width: 460px; background: var(--surface); border-radius: var(--radius);
+  padding: 28px; box-shadow: var(--shadow);
+}
+.setup-card h2 { margin: 0 0 8px; font-size: 20px; }
+.setup-card p { color: var(--muted); font-size: 14px; line-height: 1.55; }
+.setup-card ol { font-size: 14px; line-height: 1.7; padding-left: 20px; color: var(--text); }
+.setup-card code {
+  background: var(--surface-2); padding: 2px 6px; border-radius: 6px;
+  font-size: 12.5px; word-break: break-all;
+}
+
+/* ============ APP LAYOUT ============ */
+#app { position: fixed; inset: 0; display: none; }
+#app.show { display: block; }
+#map { position: absolute; inset: 0; }
+
+/* Top bar */
+#topbar {
+  position: absolute; top: env(safe-area-inset-top, 0); left: 0; right: 0; z-index: 20;
+  padding: 12px 14px 0; display: flex; flex-direction: column; gap: 10px;
+  pointer-events: none;
+}
+#topbar > * { pointer-events: auto; }
+.bar-row { display: flex; gap: 8px; align-items: center; }
+.title-pill {
+  background: var(--surface); border-radius: 999px; padding: 10px 16px;
+  font-weight: 700; font-size: 15px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 8px; flex: 1;
+}
+.title-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acid); flex-shrink: 0; }
+.icon-btn {
+  width: 42px; height: 42px; border-radius: 50%; background: var(--surface);
+  box-shadow: var(--shadow); font-size: 17px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Segmented: mode */
+.seg {
+  display: flex; background: var(--surface); border-radius: 999px;
+  padding: 4px; box-shadow: var(--shadow); width: fit-content;
+}
+.seg button {
+  padding: 8px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 500;
+  color: var(--muted); transition: all .15s;
+}
+.seg button.active { background: var(--text); color: var(--bg); font-weight: 700; }
+
+/* Day tabs / category chips */
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  background: var(--surface); border-radius: 999px; padding: 9px 15px;
+  font-size: 13.5px; font-weight: 500; white-space: nowrap;
+  box-shadow: var(--shadow); color: var(--muted); transition: all .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.chip.active { background: var(--acid); color: var(--acid-text); font-weight: 700; }
+
+/* Program strip (bottom) */
+#program {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding: 0 14px calc(14px + env(safe-area-inset-bottom, 0));
+  display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
+}
+#program::-webkit-scrollbar { display: none; }
+.step-card {
+  background: var(--surface); border-radius: var(--radius); padding: 12px 14px;
+  min-width: 190px; max-width: 230px; box-shadow: var(--shadow); flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.step-head { display: flex; align-items: center; gap: 8px; }
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--acid);
+  color: var(--acid-text); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-name { font-weight: 700; font-size: 14px; line-height: 1.25; }
+.step-meta { font-size: 12px; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.step-travel { font-size: 12px; color: var(--text); font-weight: 500; }
+.step-travel .acid { color: inherit; background: var(--acid); color: var(--acid-text); padding: 1px 7px; border-radius: 999px; font-weight: 700; }
+.step-opts { font-size: 11.5px; color: var(--muted); }
+
+/* Bottom sheet (détail lieu) */
+#sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: var(--surface); border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 40px rgba(0,0,0,.25);
+  transform: translateY(105%); transition: transform .32s cubic-bezier(.32,.72,.28,1);
+  max-height: 78vh; display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+#sheet.open { transform: translateY(0); }
+.sheet-grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 10px auto 4px; flex-shrink: 0; }
+.sheet-body { overflow-y: auto; padding: 6px 18px 18px; }
+.sheet-title-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+.sheet-emoji { font-size: 30px; line-height: 1.1; }
+.sheet-title { font-size: 20px; font-weight: 700; line-height: 1.2; flex: 1; }
+.sheet-close {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2);
+  font-size: 14px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;
+}
+.sheet-rating { font-size: 13.5px; color: var(--muted); margin-bottom: 10px; }
+.sheet-rating .star { color: #E8A500; }
+.photos {
+  display: flex; gap: 8px; overflow-x: auto; margin: 0 -18px 12px; padding: 0 18px;
+  scrollbar-width: none;
+}
+.photos::-webkit-scrollbar { display: none; }
+.photos img {
+  height: 150px; border-radius: 14px; flex-shrink: 0; object-fit: cover;
+  background: var(--surface-2); min-width: 130px;
+}
+.sheet-desc {
+  font-size: 14.5px; line-height: 1.55;
+  background: var(--surface-2); border-left: 3px solid var(--acid);
+  padding: 12px 14px; border-radius: 0 12px 12px 0; margin-bottom: 14px;
+}
+.sheet-open-status { font-size: 13px; margin-bottom: 12px; font-weight: 500; }
+.sheet-open-status.open-now { color: #2E9E44; }
+.sheet-open-status.closed-now { color: #C84B3C; }
+.maps-btn {
+  display: block; width: 100%; padding: 14px; border-radius: 14px;
+  background: var(--text); color: var(--bg); font-weight: 700; font-size: 15px;
+  text-align: center; text-decoration: none;
+}
+
+/* Emoji marker (HTML overlay) */
+.emk {
+  position: absolute; transform: translate(-50%, -100%); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; user-select: none;
+  transition: transform .12s;
+}
+.emk:hover { transform: translate(-50%, -100%) scale(1.08); }
+.emk-bubble {
+  background: var(--surface); border-radius: 50%; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.22); border: 2px solid var(--surface);
+  position: relative;
+}
+.emk-num {
+  position: absolute; top: -6px; right: -6px;
+  width: 19px; height: 19px; border-radius: 50%;
+  background: var(--acid); color: var(--acid-text);
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.emk-tip {
+  width: 2px; height: 7px; background: var(--surface); margin-top: -1px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+.emk.opt .emk-bubble { width: 30px; height: 30px; font-size: 15px; opacity: .82; border-style: dashed; border-color: var(--muted); }
+.emk.opt .emk-tip { height: 5px; opacity: .82; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loader">
+  <div class="loader-mark">B·30</div>
+  <div class="loader-msg" id="loaderMsg">On soudoie le videur du Sisyphos…</div>
+  <div class="loader-bar"></div>
+</div>
+
+<!-- SETUP (clé manquante) -->
+<div id="setup">
+  <div class="setup-card">
+    <h2>🔑 Il manque la clé Google Maps</h2>
+    <p>L'app a besoin d'une clé API Google (gratuite dans votre usage) pour la carte, les photos et les temps de trajet en transports.</p>
+    <ol>
+      <li>Va sur <code>console.cloud.google.com</code>, crée un projet</li>
+      <li>Active <b>Maps JavaScript API</b>, <b>Places API</b> et <b>Directions API</b></li>
+      <li>Crée une clé API (Identifiants → Créer → Clé API)</li>
+      <li>Restreins-la à ton domaine GitHub Pages (Restrictions → Sites web)</li>
+      <li>Colle-la dans <code>index.html</code> ligne ~où il y a <code>GOOGLE_MAPS_API_KEY</code></li>
+    </ol>
+    <p>Recharge la page ensuite — tout s'allume. ⚡</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="map"></div>
+
+  <div id="topbar">
+    <div class="bar-row">
+      <div class="title-pill"><span class="dot"></span><span id="titleText">Berlin — Nico's 30 🎂</span></div>
+      <button class="icon-btn" id="themeBtn" title="Dark mode">🌙</button>
+    </div>
+    <div class="bar-row">
+      <div class="seg" id="modeSeg">
+        <button data-mode="prog" class="active">Programme</button>
+        <button data-mode="explo">Explorer</button>
+      </div>
+    </div>
+    <div class="chips" id="dayChips">
+      <button class="chip active" data-day="ven">📅 Vendredi</button>
+      <button class="chip" data-day="sam">🎂 Samedi</button>
+      <button class="chip" data-day="dim">✈️ Dimanche</button>
+    </div>
+    <div class="chips" id="catChips" style="display:none">
+      <button class="chip active" data-cat="all">Tout</button>
+      <button class="chip" data-cat="brunch">🥐 Brunch & cafés</button>
+      <button class="chip" data-cat="resto">🍽️ Restos</button>
+      <button class="chip" data-cat="bar">🍸 Bars</button>
+      <button class="chip" data-cat="club">🎧 Clubs</button>
+      <button class="chip" data-cat="culture">🎨 Culture & chill</button>
+      <button class="chip" data-cat="vintage">👗 Vintage</button>
+    </div>
+  </div>
+
+  <div id="program"></div>
+
+  <div id="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIG — COLLE TA CLÉ GOOGLE ICI ⬇️
+   ================================================================ */
+const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
+
+/* ================================================================
+   DATA — les lieux du weekend
+   ================================================================ */
+const PLACES = {
+  hotel:        { name:"Generator Alexanderplatz", emoji:"🏨", cat:"hotel",  lat:52.523962, lng:13.417952, pid:"ChIJ2e5i1BtOqEcREset3Pdg7hM", desc:"Le QG. On dépose les sacs, on respire, et c'est parti." },
+  spreegold:    { name:"Spreegold", emoji:"🥐", cat:"brunch", lat:52.5231605, lng:13.4092636, pid:"ChIJJdTMVw5OqEcRajmwtdn7TNU", desc:"Le brunch valeur sûre : gros menus, terrasse, zéro risque de mutinerie dans le groupe." },
+  oday:         { name:"Ở Đây Deli", emoji:"🥐", cat:"brunch", lat:52.5341591, lng:13.3986802, pid:"ChIJf_XI3DJRqEcRyUdJPgaOupc", desc:"Brunch vietnamien dans un décor de film Wong Kar-wai. Le French toast fait pleurer (de joie)." },
+  fatherc:      { name:"Father Carpenter", emoji:"🥐", cat:"brunch", lat:52.5244875, lng:13.4065282, pid:"ChIJtRsiyuFRqEcRsw5mphvL8Jw", desc:"Le brunch star de Mitte, caché dans une cour. La file d'attente fait partie de l'expérience." },
+  hosw:         { name:"House of Small Wonder", emoji:"🥐", cat:"brunch", lat:52.5264072, lng:13.3944188, pid:"ChIJfSfTtelRqEcRC52WM-fWJi8", desc:"Escalier en colimaçon, jungle de plantes, brunch japonais. Vos stories vont chauffer." },
+  schwarzenberg:{ name:"Haus Schwarzenberg", emoji:"🎨", cat:"culture", lat:52.524261, lng:13.4026214, pid:"ChIJjZik3-BRqEcRYJNhq-6aGVU", desc:"Le passage street art que les touristes ratent. Gratuit, brut, parfait." },
+  cafecinema:   { name:"Café Cinema", emoji:"🍸", cat:"bar", lat:52.52418, lng:13.40245, pid:"ChIJRyQVKOFRqEcRH0BD9bGM0Tk", desc:"Ouvert la veille de la chute du Mur. Posters de ciné, cour aux guirlandes, cash only — comme à l'époque." },
+  sofi:         { name:"Sofi Bakery", emoji:"☕", cat:"brunch", lat:52.5262248, lng:13.400907, pid:"ChIJWdC0MkVRqEcRPBugdi5gyJo", desc:"La boulangerie la plus courtisée de Mitte, planquée dans une cour. Morning bun obligatoire." },
+  aera:         { name:"Aera Bread", emoji:"☕", cat:"brunch", lat:52.5294154, lng:13.4019282, pid:"ChIJTXADhRJRqEcRXjyIabnMTnI", desc:"Tout est sans gluten et personne ne s'en rend compte. Murs bleu Vermeer, vraiment beau." },
+  darkmatter:   { name:"Forest Seasons @ Dark Matter", emoji:"🌲", cat:"culture", lat:52.4927414, lng:13.4926954, pid:"ChIJqc2JIkRPqEcRLdpX7ohXL0U", desc:"Forêt de lumière et de son dans une ancienne usine. À 10 min de Sisyphos — le combo parfait avant le club. ~20€, billets en ligne." },
+  klunker:      { name:"Klunkerkranich", emoji:"🌅", cat:"bar", lat:52.482195, lng:13.4318524, pid:"ChIJBfIPPbtPqEcRMnne4FZmMfk", desc:"Un rooftop-jardin sur un parking de centre commercial. C'est Berlin résumé en un lieu. Arriver avant 18h." },
+  holzmarkt:    { name:"Holzmarkt 25", emoji:"🌅", cat:"bar", lat:52.5112292, lng:13.4266686, pid:"ChIJ8dE5ZzlOqEcRSOv8JF88prM", desc:"Village bohème au bord de la Spree, mi-utopie mi-chantier. Pizza + spritz au coucher du soleil. Le resto Katerschmaus est une pépite." },
+  fahimi:       { name:"Fahimi Bar", emoji:"🍸", cat:"bar", lat:52.499293, lng:13.4197463, pid:"ChIJxyZjojROqEcR2Tbn0upEemQ", desc:"Entrée planquée au-dessus de Kotti. Néons, béton, cocktails sérieux, vue sur le chaos de Kottbusser Tor." },
+  velvet:       { name:"Velvet", emoji:"🍸", cat:"bar", lat:52.4789825, lng:13.4384567, pid:"ChIJiTWu86NPqEcRDpAVl4UgmGA", desc:"Cocktails aux plantes sauvages cueillies autour de Berlin. Oui, vraiment. 4.7★ mérités." },
+  straube:      { name:"Schwarze Traube", emoji:"🍸", cat:"bar", lat:52.5024313, lng:13.4296153, pid:"ChIJFaheeUlOqEcRSwLnOkcqj7M", desc:"Minuscule, feutré, à la bougie. LA référence cocktails de Kreuzberg." },
+  pandoras:     { name:"Pandoras", emoji:"⛪", cat:"bar", lat:52.4962747, lng:13.3960323, pid:"ChIJ_63vGOxPqEcR-OV_4Q2C8xk", desc:"Un bar dans une église en activité. Cosy, queer-friendly, 4.8★. Ferme à 21h — c'est un spot apéro, pas d'after." },
+  kink:         { name:"Kink", emoji:"🍸", cat:"bar", lat:52.5319735, lng:13.4115959, pid:"ChIJjzSUKqRRqEcRfEvjfuXRlIg", desc:"Salle de bal de 1841, néons au plafond, cocktails de laboratoire. Chic mais pas coincé. Large pour 8." },
+  rso:          { name:"RSO.Berlin", emoji:"🎧", cat:"club", lat:52.45989, lng:13.50548, pid:"ChIJfV8BVQxPqEcRCE_Pee7Qm2I", desc:"L'héritier du Griessmühle. Grand, brut, un des meilleurs sound systems de la ville (le floor Robus)." },
+  oxi:          { name:"OXI", emoji:"🎧", cat:"club", lat:52.5077644, lng:13.4747452, pid:"ChIJhVeIFjdPqEcRSKVs3xMl9PQ", desc:"3 dancefloors + un des meilleurs jardins open-air de Berlin. Porte plus cool que la moyenne." },
+  aeden:        { name:"ÆDEN", emoji:"🎧", cat:"club", lat:52.4976865, lng:13.4498047, pid:"ChIJXRVOM81PqEcRheSDtW5ZAEg", desc:"Club-jardin au bord du canal. Vibe check à l'entrée : souriez, mais pas trop." },
+  tempelhof:    { name:"Tempelhofer Feld", emoji:"🌳", cat:"culture", lat:52.4748569, lng:13.4005926, pid:"ChIJ65nY9-hPqEcRi3G7rJmOiYg", desc:"Un aéroport devenu le plus grand parc urbain d'Europe. Pique-nique sur la piste d'atterrissage." },
+  markthalle:   { name:"Markthalle Neun", emoji:"🍽️", cat:"resto", lat:52.502135, lng:13.4315988, pid:"ChIJvaZWgElOqEcRElWjL2P9AZg", desc:"Halle de 1891, stands de bouffe du monde entier. Chacun son stand, tout le monde est content." },
+  schwestern:   { name:"3 Schwestern", emoji:"🍽️", cat:"resto", lat:52.5038607, lng:13.4243826, pid:"ChIJIxybZzZOqEcR7ktMKEAoufs", desc:"Resto dans un ancien hôpital devenu maison d'artistes. Concerts le week-end, cadre unique, prix doux." },
+  ora:          { name:"ORA", emoji:"🍽️", cat:"resto", lat:52.5013623, lng:13.4159217, pid:"ChIJCwbEVjJOqEcRlFGm69_dBJk", desc:"Dîner dans une pharmacie du 19e siècle. Les remèdes sont désormais liquides et alcoolisés." },
+  katzorange:   { name:"Katz Orange", emoji:"🍽️", cat:"resto", lat:52.5314438, lng:13.3946245, pid:"ChIJQ2g8mO9RqEcRpOSC8NXG7io", desc:"Ancienne brasserie industrielle, cuisine léchée. Le cran au-dessus sans exploser le budget." },
+  torbar:       { name:"Brasserie Torbar", emoji:"🍽️", cat:"resto", lat:52.5286255, lng:13.3934769, pid:"ChIJbUrkSO9RqEcReI6sG1NZRuI", desc:"Brasserie française, ambiance beautiful people. Le portefeuille le sentira passer, le palais dira merci. (~50-70€/pers)" },
+  sisyphos:     { name:"Sisyphos", emoji:"🎧", cat:"club", lat:52.4932271, lng:13.4919029, pid:"ChIJpwrS6d5OqEcRAwn8R8rChzU", desc:"LE club. Ancienne usine de biscuits pour chiens devenue village festif. Cash only, pas de photos, souriez au videur (mais pas trop). Petits groupes à la porte." },
+  aboutblank:   { name:"://about blank", emoji:"🎧", cat:"club", lat:52.5025323, lng:13.4663728, pid:"ChIJfyco7vlOqEcRrrbiNuS8o5s", desc:"Queer-friendly, jardin magique, porte plus douce. Le plan B qui n'a rien d'un plan B." },
+  elseclub:     { name:"Else", emoji:"🎧", cat:"club", lat:52.4949372, lng:13.462252, pid:"ChIJ4w5Jb_5OqEcR9FYTx1EIcrs", desc:"Conteneurs colorés au bord de la Spree. Festif dès le coucher du soleil." },
+  katerblau:    { name:"Kater Blau", emoji:"🎧", cat:"club", lat:52.5119258, lng:13.4253885, pid:"ChIJH9zrjDtOqEcR7NYKCwZJljc", desc:"Bohème, sur l'eau, after infini. On y entre pour une heure, on y reste huit." },
+  mauerpark:    { name:"Mauerpark", emoji:"🛍️", cat:"vintage", lat:52.5420022, lng:13.4021371, pid:"ChIJd-d5Rx1SqEcRgCz33OsCSZQ", desc:"Le dimanche berlinois : puces, vinyles, fripes, musiciens. Le karaoké commence à 15h — trop tard pour nous, snif." },
+  strom:        { name:"Strom Café", emoji:"☕", cat:"brunch", lat:52.5286648, lng:13.4155323, pid:"ChIJbcZOiUxPqEcRgktUCLyNZLE", desc:"Café de quartier planqué dans une cour de la Backfabrik. Fermé dimanche — donc samedi ou jamais." },
+  albatross:    { name:"Albatross Bakery", emoji:"🥐", cat:"brunch", lat:52.4913781, lng:13.4166506, pid:"ChIJg2JtgUxOqEcRd1FPPyI0XCI", desc:"Croissant pumpkin cream et pain à la betterave. Ça semble bizarre, c'est excellent." },
+  bonanza:      { name:"Bonanza Coffee", emoji:"☕", cat:"brunch", lat:52.5041653, lng:13.4203241, pid:"ChIJe-xsRDFOqEcR9oMD5MR9wCo", desc:"Roastery culte de Kreuzberg. Le café qui remet d'aplomb après Sisyphos." },
+  singblackbird:{ name:"Sing Blackbird", emoji:"👗", cat:"vintage", lat:52.4923463, lng:13.4261977, pid:"ChIJ0zIj27VPqEcRVrh8xvyFOQ8", desc:"Fripes 70s-90s + café. Le combo dangereux pour le porte-monnaie." },
+  mobelolfe:    { name:"Möbel Olfe", emoji:"🍸", cat:"bar", lat:52.499985, lng:13.417456, pid:"ChIJU4ZVEjNOqEcRIlxHkJd83OQ", desc:"Ancien magasin de meubles devenu bar queer culte. Bruyant, joyeux, berlinois." },
+  buckbreck:    { name:"Buck & Breck", emoji:"🍸", cat:"bar", lat:52.5321302, lng:13.3989457, pid:"ChIJ6xA6OOVRqEcRAlUf8i6Osc8", desc:"Speakeasy de référence : sonnez, attendez, priez. 14 places assises." }
+};
+
+/* Programme par jour : étapes principales (numérotées) + options */
+const PROGRAM = {
+  ven: [
+    { time:"11:00", main:"hotel",         opts:[] },
+    { time:"12:00", main:"spreegold",     opts:["oday","fatherc","hosw"] },
+    { time:"14:30", main:"schwarzenberg", opts:["cafecinema","sofi","aera"] },
+    { time:"18:00", main:"klunker",       opts:["holzmarkt"] },
+    { time:"21:00", main:"fahimi",        opts:["velvet","straube","pandoras","kink"] },
+    { time:"23:30", main:"oxi",           opts:["rso","aeden"] }
+  ],
+  sam: [
+    { time:"11:00", main:"strom",         opts:["albatross"] },
+    { time:"13:00", main:"tempelhof",     opts:[] },
+    { time:"14:30", main:"markthalle",    opts:["holzmarkt"] },
+    { time:"17:00", main:"darkmatter",    opts:[] },
+    { time:"19:30", main:"schwestern",    opts:["ora","katzorange","torbar"] },
+    { time:"23:00", main:"sisyphos",      opts:["aboutblank","elseclub","katerblau","rso"] }
+  ],
+  dim: [
+    { time:"10:30", main:"mauerpark",     opts:[] },
+    { time:"12:30", main:"oday",          opts:["bonanza"] },
+    { time:"14:00", main:"hotel",         opts:[] }
+  ]
+};
+
+const LOADER_MSGS = [
+  "On soudoie le videur du Sisyphos…",
+  "Retrait de cash pour les clubs (carte refusée, évidemment)…",
+  "Calibrage du coucher de soleil au Klunkerkranich…",
+  "Vérification du dress code : noir, noir, ou noir…",
+  "On réveille le DJ, il s'était couché à 14h…",
+  "Traçage du chemin le plus court entre deux currywurst…"
+];
+
+/* Styles de carte : gris épuré (light) et sombre (dark) */
+const MAP_STYLE_LIGHT = [
+  { elementType: "geometry", stylers: [{ color: "#ebebe8" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a84" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f2" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dde3d9", visibility: "on" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#9a9a94" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ visibility: "on", color: "#d8d8d3" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfd6d8" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] }
+];
+const MAP_STYLE_DARK = [
+  { elementType: "geometry", stylers: [{ color: "#17171a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6f6f76" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#101013" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1c221c", visibility: "on" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#242429" }] },
+  { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ visibility: "on", color: "#26262c" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1114" }] }
+];
+
+/* ================================================================
+   ÉTAT
+   ================================================================ */
+let map, placesSvc, dirSvc;
+let markers = {};          // id -> HTMLMarker
+let routeLines = [];       // polylines actives
+let mode = "prog";         // prog | explo
+let day = "ven";
+let cat = "all";
+let dark = false;
+const legCache = {};       // "a>b" -> {mode, mins, path}
+const detailCache = {};    // pid -> details
+
+/* ================================================================
+   MARKER HTML (OverlayView avec emoji)
+   ================================================================ */
+function makeHTMLMarkerClass() {
+  return class HTMLMarker extends google.maps.OverlayView {
+    constructor(pos, html, onClick) {
+      super();
+      this.pos = pos;
+      this.div = document.createElement("div");
+      this.div.innerHTML = html;
+      this.el = this.div.firstElementChild;
+      this.el.addEventListener("click", e => { e.stopPropagation(); onClick(); });
+    }
+    onAdd() { this.getPanes().overlayMouseTarget.appendChild(this.el); }
+    onRemove() { this.el.remove(); }
+    draw() {
+      const p = this.getProjection().fromLatLngToDivPixel(this.pos);
+      if (p) { this.el.style.left = p.x + "px"; this.el.style.top = p.y + "px"; }
+    }
+    setVisible(v) { this.el.style.display = v ? "" : "none"; }
+  };
+}
+
+function markerHTML(place, num, isOpt) {
+  return `<div class="emk ${isOpt ? "opt" : ""}">
+    <div class="emk-bubble">${place.emoji}${num ? `<span class="emk-num">${num}</span>` : ""}</div>
+    <div class="emk-tip"></div>
+  </div>`;
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function initApp() {
+  const HTMLMarker = makeHTMLMarkerClass();
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 52.507, lng: 13.425 },
+    zoom: 12,
+    styles: MAP_STYLE_LIGHT,
+    disableDefaultUI: true,
+    gestureHandling: "greedy",
+    clickableIcons: false
+  });
+  placesSvc = new google.maps.places.PlacesService(map);
+  dirSvc = new google.maps.DirectionsService();
+
+  // Crée tous les markers (cachés au départ)
+  for (const [id, p] of Object.entries(PLACES)) {
+    const mk = new HTMLMarker(new google.maps.LatLng(p.lat, p.lng), markerHTML(p, null, false), () => openSheet(id));
+    mk.setMap(map);
+    markers[id] = mk;
+  }
+
+  bindUI();
+  render();
+
+  document.getElementById("app").classList.add("show");
+  setTimeout(() => document.getElementById("loader").classList.add("hide"), 400);
+}
+
+/* ================================================================
+   UI BINDINGS
+   ================================================================ */
+function bindUI() {
+  document.getElementById("modeSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    mode = b.dataset.mode;
+    document.querySelectorAll("#modeSeg button").forEach(x => x.classList.toggle("active", x === b));
+    document.getElementById("dayChips").style.display = mode === "prog" ? "" : "none";
+    document.getElementById("catChips").style.display = mode === "explo" ? "" : "none";
+    document.getElementById("program").style.display = mode === "prog" ? "" : "none";
+    render();
+  });
+  document.getElementById("dayChips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    day = b.dataset.day;
+    document.querySelectorAll("#dayChips .chip").forEach(x => x.classList.toggle("active", x === b));
+    render();
+  });
+  document.getElementById("catChips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    cat = b.dataset.cat;
+    document.querySelectorAll("#catChips .chip").forEach(x => x.classList.toggle("active", x === b));
+    render();
+  });
+  document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+  map.addListener("click", closeSheet);
+
+  // Thème sauvegardé (best effort)
+  try { if (localStorage.getItem("bln30-dark") === "1") toggleTheme(); } catch (e) {}
+}
+
+function toggleTheme() {
+  dark = !dark;
+  document.documentElement.classList.toggle("dark", dark);
+  document.getElementById("themeBtn").textContent = dark ? "☀️" : "🌙";
+  map.setOptions({ styles: dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT });
+  try { localStorage.setItem("bln30-dark", dark ? "1" : "0"); } catch (e) {}
+}
+
+/* ================================================================
+   RENDER (markers visibles + programme + routes)
+   ================================================================ */
+function render() {
+  routeLines.forEach(l => l.setMap(null));
+  routeLines = [];
+
+  if (mode === "explo") {
+    for (const [id, p] of Object.entries(PLACES)) {
+      const show = cat === "all" ? p.cat !== "hotel" : p.cat === cat;
+      updateMarker(id, show || id === "hotel", null, false);
+    }
+    document.getElementById("program").innerHTML = "";
+    return;
+  }
+
+  // Mode programme
+  const steps = PROGRAM[day];
+  const mains = steps.map(s => s.main);
+  const opts = new Set(steps.flatMap(s => s.opts));
+
+  for (const id of Object.keys(PLACES)) {
+    const mi = mains.indexOf(id);
+    if (mi >= 0) updateMarker(id, true, mi + 1, false);
+    else if (opts.has(id)) updateMarker(id, true, null, true);
+    else updateMarker(id, false, null, false);
+  }
+
+  // Fit bounds sur les étapes principales
+  const b = new google.maps.LatLngBounds();
+  mains.forEach(id => b.extend({ lat: PLACES[id].lat, lng: PLACES[id].lng }));
+  map.fitBounds(b, { top: 190, bottom: 150, left: 40, right: 40 });
+
+  renderProgramStrip(steps);
+  computeRoutes(steps);
+}
+
+function updateMarker(id, visible, num, isOpt) {
+  const mk = markers[id];
+  mk.setVisible(visible);
+  if (visible) {
+    mk.el.className = `emk ${isOpt ? "opt" : ""}`;
+    const bubble = mk.el.querySelector(".emk-bubble");
+    const existing = bubble.querySelector(".emk-num");
+    if (existing) existing.remove();
+    if (num) bubble.insertAdjacentHTML("beforeend", `<span class="emk-num">${num}</span>`);
+  }
+}
+
+/* ================================================================
+   PROGRAMME STRIP
+   ================================================================ */
+function renderProgramStrip(steps) {
+  const el = document.getElementById("program");
+  el.innerHTML = steps.map((s, i) => {
+    const p = PLACES[s.main];
+    return `<div class="step-card" data-id="${s.main}">
+      <div class="step-head"><span class="step-num">${i + 1}</span><span class="step-name">${p.emoji} ${p.name}</span></div>
+      <div class="step-meta"><span>🕐 ${s.time}</span>${s.opts.length ? `<span class="step-opts">+${s.opts.length} option${s.opts.length > 1 ? "s" : ""}</span>` : ""}</div>
+      <div class="step-travel" id="leg-${day}-${i}">${i < steps.length - 1 ? "→ calcul du trajet…" : "🏁 dernière étape"}</div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".step-card").forEach(c => c.addEventListener("click", () => {
+    const p = PLACES[c.dataset.id];
+    map.panTo({ lat: p.lat, lng: p.lng });
+    if (map.getZoom() < 14) map.setZoom(14);
+    openSheet(c.dataset.id);
+  }));
+}
+
+/* ================================================================
+   ROUTES (Directions API : marche si court, transit sinon)
+   ================================================================ */
+function haversine(a, b) {
+  const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function computeRoutes(steps) {
+  const thisDay = day;
+  steps.forEach((s, i) => {
+    if (i >= steps.length - 1) return;
+    const from = PLACES[s.main], to = PLACES[steps[i + 1].main];
+    const key = `${s.main}>${steps[i + 1].main}`;
+    if (legCache[key]) { paintLeg(thisDay, i, legCache[key]); return; }
+
+    const walkable = haversine(from, to) < 1.3;
+    dirSvc.route({
+      origin: { lat: from.lat, lng: from.lng },
+      destination: { lat: to.lat, lng: to.lng },
+      travelMode: walkable ? google.maps.TravelMode.WALKING : google.maps.TravelMode.TRANSIT
+    }, (res, status) => {
+      if (status !== "OK" || !res.routes[0]) {
+        paintLeg(thisDay, i, { mode: "?", mins: null, path: null });
+        return;
+      }
+      const leg = res.routes[0].legs[0];
+      const data = {
+        mode: walkable ? "🚶" : "🚇",
+        mins: Math.round(leg.duration.value / 60),
+        path: res.routes[0].overview_path
+      };
+      legCache[key] = data;
+      paintLeg(thisDay, i, data);
+    });
+  });
+}
+
+function paintLeg(forDay, i, data) {
+  if (forDay !== day || mode !== "prog") return; // l'utilisateur a changé de vue entre-temps
+  const el = document.getElementById(`leg-${forDay}-${i}`);
+  if (el) el.innerHTML = data.mins != null
+    ? `${data.mode} <span class="acid">${data.mins} min</span> jusqu'à l'étape ${i + 2}`
+    : `→ trajet indisponible`;
+  if (data.path) {
+    const line = new google.maps.Polyline({
+      path: data.path, map,
+      strokeColor: "#CCFF00", strokeOpacity: 0.95, strokeWeight: 4,
+      zIndex: 5
+    });
+    const halo = new google.maps.Polyline({
+      path: data.path, map,
+      strokeColor: dark ? "#0E0E10" : "#FFFFFF", strokeOpacity: 0.8, strokeWeight: 8,
+      zIndex: 4
+    });
+    routeLines.push(line, halo);
+  }
+}
+
+/* ================================================================
+   BOTTOM SHEET (détail lieu)
+   ================================================================ */
+function openSheet(id) {
+  const p = PLACES[id];
+  const body = document.getElementById("sheetBody");
+  body.innerHTML = `
+    <div class="sheet-title-row">
+      <span class="sheet-emoji">${p.emoji}</span>
+      <span class="sheet-title">${p.name}</span>
+      <button class="sheet-close" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="sheet-rating" id="shRating">Chargement…</div>
+    <div class="photos" id="shPhotos"></div>
+    <div class="sheet-open-status" id="shOpen"></div>
+    <div class="sheet-desc">${p.desc}</div>
+    <a class="maps-btn" id="shMaps" href="https://www.google.com/maps/place/?q=place_id:${p.pid}" target="_blank" rel="noopener">Ouvrir dans Google Maps ↗</a>
+  `;
+  document.getElementById("sheet").classList.add("open");
+
+  const applyDetails = d => {
+    document.getElementById("shRating").innerHTML = d.rating
+      ? `<span class="star">★</span> ${d.rating} · ${d.user_ratings_total?.toLocaleString("fr") || "?"} avis`
+      : "";
+    if (d.opening_hours) {
+      const o = d.opening_hours.isOpen?.();
+      const el = document.getElementById("shOpen");
+      if (o === true) { el.textContent = "● Ouvert maintenant"; el.className = "sheet-open-status open-now"; }
+      else if (o === false) { el.textContent = "● Fermé actuellement"; el.className = "sheet-open-status closed-now"; }
+    }
+    const ph = document.getElementById("shPhotos");
+    ph.innerHTML = "";
+    (d.photos || []).slice(0, 5).forEach(photo => {
+      const img = document.createElement("img");
+      img.src = photo.getUrl({ maxHeight: 300 });
+      img.loading = "lazy";
+      ph.appendChild(img);
+    });
+    if (d.url) document.getElementById("shMaps").href = d.url;
+  };
+
+  if (detailCache[p.pid]) { applyDetails(detailCache[p.pid]); return; }
+  placesSvc.getDetails(
+    { placeId: p.pid, fields: ["photos", "rating", "user_ratings_total", "url", "opening_hours"] },
+    (d, status) => {
+      if (status === "OK" && d) { detailCache[p.pid] = d; applyDetails(d); }
+      else document.getElementById("shRating").textContent = "";
+    }
+  );
+}
+function closeSheet() { document.getElementById("sheet").classList.remove("open"); }
+
+/* ================================================================
+   BOOT
+   ================================================================ */
+(function boot() {
+  // Loader : messages qui tournent
+  let mi = 0;
+  const msgEl = document.getElementById("loaderMsg");
+  const rot = setInterval(() => {
+    mi = (mi + 1) % LOADER_MSGS.length;
+    msgEl.textContent = LOADER_MSGS[mi];
+  }, 1600);
+
+  if (!GOOGLE_MAPS_API_KEY) {
+    setTimeout(() => {
+      clearInterval(rot);
+      document.getElementById("loader").classList.add("hide");
+      document.getElementById("setup").classList.add("show");
+    }, 1200);
+    return;
+  }
+
+  window._initApp = () => { clearInterval(rot); initApp(); };
+  const s = document.createElement("script");
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=_initApp&language=fr`;
+  s.onerror = () => {
+    clearInterval(rot);
+    document.getElementById("loader").classList.add("hide");
+    document.getElementById("setup").classList.add("show");
+  };
+  document.head.appendChild(s);
+
+  // PWA
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

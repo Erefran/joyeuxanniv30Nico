@@ -1,0 +1,14 @@
+{
+  "name": "Berlin — Nico's 30",
+  "short_name": "BLN30",
+  "description": "Le programme du weekend anniversaire à Berlin, 17-19 juillet",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E0E10",
+  "theme_color": "#0E0E10",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
