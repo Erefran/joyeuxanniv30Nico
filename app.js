@@ -5,8 +5,9 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
 
-const DUSK_START = 17 * 60 + 30;  // 17:30
-const NIGHT_START = 20 * 60;      // 20:00
+const DAY_START = 7 * 60;         // 07:00 — bascule en mode clair
+const DUSK_START = 16 * 60;       // 16:00 — coucher de soleil
+const NIGHT_START = 20 * 60;      // 20:00 — nuit
 const NIGHT_CATS = new Set(["bar", "club", "sunset"]);
 const DAY_CATS = new Set(["brunch", "breakfast", "patisserie", "cafe"]);
 
@@ -30,16 +31,34 @@ function nowMinutes(){ const d = new Date(); return d.getHours()*60 + d.getMinut
 
 /* Style Google Maps sombre/épuré (base permanente — l'overlay fait le reste) */
 const MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#17171a" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#6f6f76" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#101013" }] },
+  { elementType: "geometry", stylers: [{ color: "#232329" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#9a9aa2" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#141416" }] },
   { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1c221c", visibility: "on" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#242429" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#212b21", visibility: "on" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#37373f" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#3d3d46" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#46464f" }] },
   { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "transit.line", elementType: "geometry", stylers: [{ visibility: "on", color: "#26262c" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1114" }] }
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ visibility: "on", color: "#32323a" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#15181d" }] }
+];
+
+/* Style Google Maps clair — utilisé de 7h à 16h (mode jour) */
+const MAP_STYLE_LIGHT = [
+  { elementType: "geometry", stylers: [{ color: "#F2F2ED" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6b6b72" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dbe9d8", visibility: "on" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#eeeee8" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#e3e3dc" }] },
+  { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ visibility: "on", color: "#e6e6e0" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfe3ee" }] }
 ];
 
 /* ================================================================
@@ -62,6 +81,18 @@ function makeHTMLMarkerClass(){
   };
 }
 
+/* Voile ciel (jour/crépuscule/nuit) rattaché au pane "overlayLayer" de Google Maps,
+   qui est sous les pins (overlayMouseTarget) — sinon le voile peint par-dessus les
+   pins et les rend délavés quelle que soit leur opacité JS. */
+function makeSkyOverlayClass(){
+  return class SkyOverlay extends google.maps.OverlayView {
+    constructor(el){ super(); this.el = el; }
+    onAdd(){ this.getPanes().overlayLayer.appendChild(this.el); }
+    onRemove(){ /* le noeud reste réutilisable, on ne le détruit pas */ }
+    draw(){}
+  };
+}
+
 function pinHTML(place, badge, styleClass, fi){
   const numHtml = badge != null ? `<span class="pin-num">${badge}</span>` : "";
   return `<div class="pin ${styleClass}" data-fi="${fi % 4}">
@@ -81,6 +112,9 @@ function initApp(){
   });
   placesSvc = new google.maps.places.PlacesService(map);
   dirSvc = new google.maps.DirectionsService();
+
+  const SkyOverlay = makeSkyOverlayClass();
+  new SkyOverlay(document.getElementById("skyOverlay")).setMap(map);
   geocoder = new google.maps.Geocoder();
 
   let fi = 0;
@@ -93,6 +127,10 @@ function initApp(){
 
   audioEl = new Audio("audio/sisyphos-teaser.mp3");
   audioEl.addEventListener("ended", () => setMusicPlaying(null));
+  audioEl.addEventListener("error", () => {
+    if (playingId !== null) setMusicPlaying(null);
+    toast("🔇 Teaser audio introuvable — vérifie que audio/sisyphos-teaser.mp3 est bien en ligne");
+  });
 
   bindUI();
   applyTime(currentMinutes, false);
@@ -162,8 +200,9 @@ function bindUI(){
   // sheet drag
   const sheet = document.getElementById("sheet"), grab = document.getElementById("grabHandle"), backdrop = document.getElementById("backdrop");
   let dragging=false, startY=0, startH=0;
-  const PEEK=()=>window.innerHeight*0.42, FULL=()=>window.innerHeight*0.86;
+  const PEEK=()=>window.innerHeight*0.5, FULL=()=>window.innerHeight*0.86;
   window._sheetH = 0;
+  window._peekH = PEEK(); // ajusté dynamiquement au contenu à chaque openSheet()
   function setH(h, anim){
     window._sheetH = Math.max(0, Math.min(FULL(), h));
     sheet.classList.toggle("animate", !!anim);
@@ -175,18 +214,18 @@ function bindUI(){
   function dragMove(y){ if(!dragging) return; setH(startH + (startY - y), false); }
   function dragEnd(){
     if(!dragging) return; dragging=false;
-    if (window._sheetH < PEEK()*0.5) closeSheet();
-    else if (window._sheetH < (PEEK()+FULL())/2) setH(PEEK(), true);
+    const peek = window._peekH || PEEK();
+    if (window._sheetH < peek*0.5) closeSheet();
+    else if (window._sheetH < (peek+FULL())/2) setH(peek, true);
     else setH(FULL(), true);
   }
-  grab.addEventListener("touchstart", e=>dragStart(e.touches[0].clientY), {passive:true});
-  grab.addEventListener("touchmove", e=>dragMove(e.touches[0].clientY), {passive:true});
-  grab.addEventListener("touchend", dragEnd);
-  grab.addEventListener("mousedown", e=>{
+  grab.addEventListener("pointerdown", e => {
+    grab.setPointerCapture(e.pointerId);
     dragStart(e.clientY);
-    const mv=ev=>dragMove(ev.clientY), up=()=>{dragEnd(); window.removeEventListener("mousemove",mv); window.removeEventListener("mouseup",up);};
-    window.addEventListener("mousemove",mv); window.addEventListener("mouseup",up);
   });
+  grab.addEventListener("pointermove", e => dragMove(e.clientY));
+  grab.addEventListener("pointerup", dragEnd);
+  grab.addEventListener("pointercancel", dragEnd);
   backdrop.addEventListener("click", closeSheet);
   setH(0,false);
 
@@ -215,33 +254,49 @@ function updateSunTimeLabel(t){
   document.getElementById("sunTime").textContent = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
+let currentPeriod = null; // "day" | "dusk" | "night" — évite de re-swapper le style de carte à chaque tick
+
 function applyTime(t, animate){
   updateSunTimeLabel(t);
-  const k = Math.max(0, Math.min(1, (t - DUSK_START) / (NIGHT_START - DUSK_START)));
 
-  // couleurs : jour (neutre) -> crépuscule (orange/violet) -> nuit (bleu marine profond)
-  const day1=[40,46,64], dusk1=[255,140,60], night1=[10,10,28];
-  const day2=[20,22,32], dusk2=[130,40,120], night2=[2,2,10];
-  let c1, c2, op;
-  if (t < DUSK_START){ c1=day1; c2=day2; op=0.10; }
-  else if (t < NIGHT_START){
-    c1 = [ lerp(day1[0],dusk1[0],k), lerp(day1[1],dusk1[1],k), lerp(day1[2],dusk1[2],k) ];
+  const period = (t >= DAY_START && t < DUSK_START) ? "day" : (t >= DUSK_START && t < NIGHT_START) ? "dusk" : "night";
+
+  if (period !== currentPeriod){
+    currentPeriod = period;
+    document.documentElement.classList.remove("day", "dusk", "night");
+    document.documentElement.classList.add(period);
+    if (map) map.setOptions({ styles: period === "day" ? MAP_STYLE_LIGHT : MAP_STYLE });
+  }
+
+  // couleurs : jour (quasi neutre) -> crépuscule (orange/violet façon météo Apple) -> nuit (bleu marine profond)
+  const day1=[239,239,234], day2=[213,217,226];
+  const dusk1=[255,138,58],  dusk2=[142,45,158];
+  const night1=[10,10,28],   night2=[2,2,10];
+  let c1, c2, op, blend;
+
+  if (period === "day"){
+    c1 = day1; c2 = day2; op = 0.05; blend = "normal";
+  } else if (period === "dusk"){
+    const k = (t - DUSK_START) / (NIGHT_START - DUSK_START); // 0 → 1 sur toute la fenêtre 16h-20h
+    const kColor = Math.min(1, k * 1.8); // le orangé arrive vite, puis on glisse vers le violet/nuit
+    c1 = [ lerp(day1[0],dusk1[0],kColor), lerp(day1[1],dusk1[1],kColor), lerp(day1[2],dusk1[2],kColor) ];
     c2 = [ lerp(day2[0],dusk2[0],k), lerp(day2[1],dusk2[1],k), lerp(day2[2],dusk2[2],k) ];
-    op = lerp(0.10, 0.5, k);
-    // en fin de fenêtre crépuscule, on glisse vers les teintes nuit
-    if (k > 0.7){
-      const k2 = (k-0.7)/0.3;
-      c1 = [ lerp(c1[0],night1[0],k2), lerp(c1[1],night1[1],k2), lerp(c1[2],night1[2],k2) ];
-      c2 = [ lerp(c2[0],night2[0],k2), lerp(c2[1],night2[1],k2), lerp(c2[2],night2[2],k2) ];
-      op = lerp(op, 0.55, k2);
+    if (k > 0.6){
+      const k2 = (k-0.6)/0.4;
+      c1 = [ lerp(dusk1[0],night1[0],k2), lerp(dusk1[1],night1[1],k2), lerp(dusk1[2],night1[2],k2) ];
+      c2 = [ lerp(dusk2[0],night2[0],k2), lerp(dusk2[1],night2[1],k2), lerp(dusk2[2],night2[2],k2) ];
     }
-  } else { c1=night1; c2=night2; op=0.55; }
+    op = lerp(0.5, 0.7, k);
+    blend = "normal";
+  } else {
+    c1 = night1; c2 = night2; op = 0.55; blend = "multiply";
+  }
 
   const root = document.documentElement.style;
   root.setProperty("--overlay-c1", `rgba(${c1[0]|0},${c1[1]|0},${c1[2]|0},1)`);
   root.setProperty("--overlay-c2", `rgba(${c2[0]|0},${c2[1]|0},${c2[2]|0},1)`);
   root.setProperty("--overlay-op", op.toFixed(2));
-  document.documentElement.classList.toggle("night", t >= NIGHT_START || t < 300);
+  root.setProperty("--overlay-blend", blend);
 
   // arc soleil/lune
   const path = document.getElementById("arcPath");
@@ -256,25 +311,25 @@ function applyTime(t, animate){
     document.getElementById("arcSvg").appendChild(sunDot);
   }
   sunDot.setAttribute("x", pt.x); sunDot.setAttribute("y", pt.y+7);
-  sunDot.textContent = (t >= NIGHT_START || t < 300) ? "🌙" : (t >= DUSK_START ? "🌇" : "☀️");
-  document.getElementById("sunBtn").textContent = (t >= NIGHT_START || t < 300) ? "🌙" : (t >= DUSK_START ? "🌇" : "☀️");
+  const icon = period === "night" ? "🌙" : period === "dusk" ? "🌇" : "☀️";
+  sunDot.textContent = icon;
+  document.getElementById("sunBtn").textContent = icon;
 
-  updateCategoryVisibility(t);
+  updateCategoryVisibility(t, period);
 }
 
-function updateCategoryVisibility(t){
-  const kNight = Math.max(0, Math.min(1, (t - DUSK_START) / (NIGHT_START - DUSK_START)));
+function updateCategoryVisibility(t, period){
+  let kNight;
+  if (period === "day") kNight = 0;
+  else if (period === "night") kNight = 1;
+  else kNight = (t - DUSK_START) / (NIGHT_START - DUSK_START); // dusk : transition progressive
+
   for (const [id, p] of Object.entries(PLACES)){
     const mk = markers[id]; if (!mk || !mk.el) continue;
-    let dim = false;
-    if (NIGHT_CATS.has(p.cat)) dim = (t < DUSK_START); // masqué avant 17h30, apparaît ensuite
-    else if (DAY_CATS.has(p.cat)) dim = (t >= NIGHT_START); // masqué après 20h
-    // fondu progressif via opacity custom plutôt que tout ou rien :
     const bubble = mk.el.querySelector(".pin-bubble");
     if (!bubble) continue;
-    if (NIGHT_CATS.has(p.cat)) bubble.style.opacity = mk.el.classList.contains("dim") ? "" : lerp(0.12, 1, kNight);
-    else if (DAY_CATS.has(p.cat)) bubble.style.opacity = mk.el.classList.contains("dim") ? "" : lerp(1, 0.12, kNight);
-    mk.el.classList.toggle("dim", false); // le fondu progressif remplace le tout-ou-rien
+    if (NIGHT_CATS.has(p.cat)) bubble.style.opacity = lerp(0.12, 1, kNight);
+    else if (DAY_CATS.has(p.cat)) bubble.style.opacity = lerp(1, 0.12, kNight);
   }
 }
 
@@ -485,8 +540,12 @@ function setMusicPlaying(id){
 }
 function toggleMusic(id){
   if (playingId === id){ audioEl.pause(); setMusicPlaying(null); return; }
-  audioEl.currentTime = 0; audioEl.play().catch(()=>{});
-  setMusicPlaying(id);
+  audioEl.currentTime = 0;
+  setMusicPlaying(id); // optimiste : le bouton passe en "pause" tout de suite
+  audioEl.play().catch(() => {
+    setMusicPlaying(null);
+    toast("🔇 Lecture impossible — le navigateur a bloqué la lecture ou le fichier est introuvable");
+  });
 }
 
 /* ================================================================
@@ -502,7 +561,49 @@ function bumpReaction(id, emoji){
 /* ================================================================
    BOTTOM SHEET — card façon Google Maps
    ================================================================ */
+let openPlaceId = null;
+
+/* Ouvre le sheet à une hauteur calculée sur le contenu réel (photos + why-card
+   visibles sans swipe), plutôt qu'un pourcentage fixe de l'écran. */
+function openSheetToContent(){
+  requestAnimationFrame(() => {
+    const scroll = document.getElementById("sheetScroll");
+    const whyEl = scroll.querySelector(".why-card");
+    const anchor = whyEl ? (whyEl.offsetTop + whyEl.offsetHeight) : scroll.scrollHeight;
+    const desired = Math.min(window._FULL(), Math.max(window._PEEK()*0.7, anchor + 40));
+    window._peekH = desired;
+    window._setSheetH(desired, true);
+  });
+}
+
+/* Statut horaires enrichi : Ouvert / Ferme bientôt (< 60 min) / Fermé,
+   calculé à partir des periods Google Places (plus fin que isOpen()). */
+function getOpenStatus(oh){
+  if (!oh || typeof oh.isOpen !== "function") return null;
+  const open = oh.isOpen();
+  if (open == null) return null;
+  if (!open) return { label:"Fermé", cls:"status-closed" };
+  const periods = oh.periods || [];
+  const now = new Date();
+  const day = now.getDay(), nowMins = now.getHours()*60 + now.getMinutes();
+  for (const per of periods){
+    if (!per.open || per.open.day !== day) continue;
+    if (!per.close) return { label:"Ouvert", cls:"status-open" }; // ouvert 24h/24
+    const closeMins = parseInt(per.close.time.slice(0,2),10)*60 + parseInt(per.close.time.slice(2),10);
+    let diff = closeMins - nowMins;
+    if (diff < 0) diff += 1440;
+    if (diff <= 60) return { label:`Ferme bientôt · ${diff} min`, cls:"status-soon" };
+  }
+  return { label:"Ouvert", cls:"status-open" };
+}
+
+function toggleHours(id){
+  const box = document.getElementById(`shHours-${id}`);
+  if (box) box.classList.toggle("open");
+}
+
 function openSheet(id){
+  openPlaceId = id;
   const p = PLACES[id];
   clearItinLines();
   document.querySelectorAll(".pin").forEach(el => el.classList.remove("active"));
@@ -524,6 +625,7 @@ function openSheet(id){
     <div class="expand-hint">⌃ glisse vers le haut pour tout voir</div>
     <div class="photos" id="shPhotos-${id}"><div class="photo"></div><div class="photo"></div><div class="photo"></div></div>
     <div class="info-grid" id="shInfo-${id}"></div>
+    <div class="hours-list" id="shHours-${id}"></div>
     <div class="why-card"><b>Pourquoi c'est cool —</b> ${p.why}</div>
     <div class="desc-card">${p.desc}</div>
     ${p.music ? `
@@ -545,7 +647,7 @@ function openSheet(id){
     </div>
   `;
   document.getElementById("sheetScroll").scrollTop = 0;
-  window._setSheetH(window._PEEK(), true);
+  openSheetToContent();
   map.panTo({ lat: p.lat, lng: p.lng });
 
   if (!p.pid){
@@ -560,13 +662,17 @@ function openSheet(id){
     const dotsN = d.price_level != null ? d.price_level : 1;
     document.getElementById(`shPrice-${id}`).innerHTML = [0,1,2].map(i=>`<span class="${i<=dotsN?'on':''}"></span>`).join("");
     const infoEl = document.getElementById(`shInfo-${id}`);
-    let statusHtml = "";
-    if (d.opening_hours){
-      const open = typeof d.opening_hours.isOpen === "function" ? d.opening_hours.isOpen() : null;
-      if (open === true) statusHtml = `<div class="info-pill status-open">● Ouvert</div>`;
-      else if (open === false) statusHtml = `<div class="info-pill status-closed">● Fermé</div>`;
-    }
+    const st = getOpenStatus(d.opening_hours);
+    const statusHtml = st ? `<button class="info-pill ${st.cls} status-btn" onclick="toggleHours('${id}')">● ${st.label} ${d.opening_hours.weekday_text ? "⌄" : ""}</button>` : "";
     infoEl.innerHTML = statusHtml + (d.formatted_address ? `<div class="info-pill addr">📍 ${d.formatted_address}</div>` : "");
+    const hoursEl = document.getElementById(`shHours-${id}`);
+    if (hoursEl){
+      if (d.opening_hours && d.opening_hours.weekday_text){
+        hoursEl.innerHTML = d.opening_hours.weekday_text.map(t => `<div class="hours-row">${t}</div>`).join("");
+      } else {
+        hoursEl.remove();
+      }
+    }
     const ph = document.getElementById(`shPhotos-${id}`);
     ph.innerHTML = "";
     (d.photos||[]).slice(0,6).forEach(photo => {
@@ -577,6 +683,7 @@ function openSheet(id){
       ph.appendChild(div);
     });
     if (!d.photos || !d.photos.length) ph.innerHTML = `<div class="photo loaded" style="display:flex;align-items:center;justify-content:center;font-size:34px;">${p.emoji}</div>`;
+    if (openPlaceId === id) openSheetToContent(); // le contenu a grandi (adresse, statut...), on réajuste la hauteur
   };
   if (detailCache[p.pid]) return applyDetails(detailCache[p.pid]);
   placesSvc.getDetails({ placeId:p.pid, fields:["photos","rating","user_ratings_total","opening_hours","formatted_address","price_level"] }, (d, status) => {
@@ -584,7 +691,7 @@ function openSheet(id){
     else { document.getElementById(`shRating-${id}`).textContent=""; }
   });
 }
-function closeSheet(){ window._setSheetH(0, true); clearItinLines(); document.querySelectorAll(".pin").forEach(el => el.classList.remove("active")); }
+function closeSheet(){ openPlaceId = null; window._setSheetH(0, true); clearItinLines(); document.querySelectorAll(".pin").forEach(el => el.classList.remove("active")); }
 function reactClick(id, emoji){
   const r = bumpReaction(id, emoji);
   openSheet(id); // re-render pour mettre à jour les compteurs
