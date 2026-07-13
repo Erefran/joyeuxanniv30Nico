@@ -41,6 +41,16 @@ html.day{
   --why-text: #4a5c00;
   --accent-text: #6b8a00;
 }
+/* UI teintée façon golden hour pour accompagner le voile ciel du crépuscule */
+html.dusk{
+  --glass: rgba(74,36,55,.58); --glass-brd: rgba(255,190,150,.20);
+  --text:#FBEFE7; --muted:#DAB0AE;
+  --bg:#2A1522;
+  --arc-stroke: rgba(255,214,180,.24);
+  --surface-tint: rgba(255,190,150,.07);
+  --surface-tint-strong: rgba(255,190,150,.10);
+  --why-text: #F3E2B8;
+}
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; height:100%; overflow:hidden; background:var(--bg); transition:background .5s ease;}
 body{font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,sans-serif; color:var(--text); transition:color .3s ease;}
@@ -381,7 +391,7 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<script src="data.js?v=20260714c"></script>
-<script src="app.js?v=20260714c"></script>
+<script src="data.js?v=20260714d"></script>
+<script src="app.js?v=20260714d"></script>
 </body>
 </html>

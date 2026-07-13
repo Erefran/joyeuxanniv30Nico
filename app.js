@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714c"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260714d"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -86,18 +86,25 @@ function makeHTMLMarkerClass(){
 /* Voile ciel (jour/crépuscule/nuit) rattaché au pane "overlayLayer" de Google Maps,
    qui est sous les pins (overlayMouseTarget) — sinon le voile peint par-dessus les
    pins et les rend délavés quelle que soit leur opacité JS.
-   Le pane overlayLayer n'a pas de hauteur CSS définie : un enfant en inset:0 s'y
-   effondre à 0px (confirmé en live). On donne donc une taille en pixels explicite,
-   recalculée à chaque draw() (zoom/pan/resize). */
+   Le pane overlayLayer est décalé en interne via un transform (pour le pan fluide) :
+   son origine locale (0,0) ne correspond PAS au coin haut-gauche du viewport visible.
+   On utilise donc fromContainerPixelToDivPixel (coordonnées viewport → coordonnées
+   pane) pour calculer position ET taille à chaque draw(), sinon le voile ne couvre
+   qu'un coin de la carte (confirmé en live) au lieu de tout l'écran. */
 function makeSkyOverlayClass(){
   return class SkyOverlay extends google.maps.OverlayView {
-    constructor(el){ super(); this.el = el; this.el.style.position = "absolute"; this.el.style.left = "0px"; this.el.style.top = "0px"; }
+    constructor(el){ super(); this.el = el; this.el.style.position = "absolute"; }
     onAdd(){ this.getPanes().overlayLayer.appendChild(this.el); }
     onRemove(){ /* le noeud reste réutilisable, on ne le détruit pas */ }
     draw(){
+      const proj = this.getProjection(); if (!proj) return;
       const mapDiv = this.getMap().getDiv();
-      this.el.style.width = mapDiv.clientWidth + "px";
-      this.el.style.height = mapDiv.clientHeight + "px";
+      const tl = proj.fromContainerPixelToDivPixel(new google.maps.Point(0, 0));
+      const br = proj.fromContainerPixelToDivPixel(new google.maps.Point(mapDiv.clientWidth, mapDiv.clientHeight));
+      this.el.style.left = tl.x + "px";
+      this.el.style.top = tl.y + "px";
+      this.el.style.width = (br.x - tl.x) + "px";
+      this.el.style.height = (br.y - tl.y) + "px";
     }
   };
 }
