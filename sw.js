@@ -1,5 +1,9 @@
-const CACHE = 'bln30-v2';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './audio/sisyphos-teaser.mp3'];
+const CACHE = 'bln30-v4';
+const SHELL = ['./', './index.html', './app.js', './data.js', './manifest.json', './icon-192.png', './icon-512.png', './audio/sisyphos-teaser.mp3'];
+// Ces fichiers changent souvent pendant le développement — toujours vérifier la dernière
+// version en ligne avant de servir le cache (sinon un appareil qui a déjà visité le site
+// reste bloqué sur l'ancien app.js/data.js indéfiniment, même après un nouveau déploiement).
+const NETWORK_FIRST = new Set(['index.html', 'app.js', 'data.js']);
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -12,11 +16,12 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Réseau d'abord pour le HTML (toujours la dernière version), cache en secours seulement si offline.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // laisse passer Google Maps/Places tel quel
-  if (e.request.mode === 'navigate' || url.pathname.endsWith('index.html')) {
+
+  const isNetworkFirst = e.request.mode === 'navigate' || NETWORK_FIRST.has(url.pathname.split('/').pop());
+  if (isNetworkFirst) {
     e.respondWith(
       fetch(e.request).then(res => {
         const copy = res.clone();
@@ -26,10 +31,15 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
+
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
+      // Les réponses 206 (Partial Content, typiques des fichiers audio) ne peuvent
+      // pas être mises en cache par l'API Cache — on les sert sans les stocker.
+      if (res.status === 200) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      }
       return res;
     }))
   );

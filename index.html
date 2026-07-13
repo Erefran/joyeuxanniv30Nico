@@ -45,7 +45,15 @@ img{-webkit-user-drag:none;}
   background: linear-gradient(165deg, var(--overlay-c1) 0%, var(--overlay-c2) 100%);
   opacity: var(--overlay-op);
   mix-blend-mode: var(--overlay-blend, multiply);
-  transition: opacity .4s ease;
+  transition: opacity .5s ease;
+}
+/* Coucher de soleil : dégradé fixe façon "Sunset Wedding Colors" plutôt qu'une
+   interpolation à 2 teintes — seule l'intensité (opacity) bouge dans le temps. */
+html.dusk #skyOverlay{
+  background: linear-gradient(165deg,
+    #393E75 0%, #644B80 14%, #8E588A 28%, #B5698E 42%,
+    #DC7A91 55%, #ED8990 66%, #FE978E 76%, #FEA98E 85%,
+    #FEBB8E 93%, #FFD99E 100%);
 }
 
 /* sun/moon arc */
@@ -116,10 +124,12 @@ img{-webkit-user-drag:none;}
   transition: max-height .35s ease, opacity .3s ease, margin .35s ease;
   margin-bottom:0;
 }
-#sunPanel.open{ max-height:110px; opacity:1; margin-bottom:9px; }
+#sunPanel.open{ max-height:135px; opacity:1; margin-bottom:9px; }
 .sun-card{ padding:14px 16px 12px; }
-.sun-head{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:8px; font-weight:600; }
+.sun-head{ display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-bottom:8px; font-weight:600; }
 .sun-head b{ color:var(--text); font-size:13px; }
+.sun-head-right{ display:flex; align-items:center; gap:8px; }
+.now-btn{ font-size:10px; font-weight:700; color:#0B0B0D; background:var(--acid); border-radius:999px; padding:4px 10px; white-space:nowrap; }
 input#sunSlider{
   -webkit-appearance:none; width:100%; height:5px; border-radius:5px;
   background:linear-gradient(90deg,#2b3a55,#e08a3c,#a83c6e,#1a1a2e); outline:none;
@@ -290,9 +300,12 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
   <div id="sunPanel" class="glass" style="border-radius:20px;">
     <div class="sun-card">
-      <div class="sun-head"><span>Voyager dans la journée</span><b id="sunTime">14:00</b></div>
+      <div class="sun-head">
+        <span>Voyager dans la journée</span>
+        <span class="sun-head-right"><b id="sunTime">14:00</b><button id="nowBtn" class="now-btn">maintenant</button></span>
+      </div>
       <input type="range" id="sunSlider" min="0" max="1440" step="10" value="840">
-      <div class="sun-reset">relâche pour revenir à l'heure actuelle</div>
+      <div class="sun-reset">glisse pour explorer — reste affiché jusqu'à ce que tu reviennes à "maintenant"</div>
     </div>
   </div>
   <div class="row chips" style="margin-bottom:7px;">

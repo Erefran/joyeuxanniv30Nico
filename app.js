@@ -100,6 +100,39 @@ function pinHTML(place, badge, styleClass, fi){
   </div>`;
 }
 
+/* Écarte visuellement les lieux trop proches (ex: Café Cinema à ~14m de Haus
+   Schwarzenberg) pour que leurs pins ne se chevauchent pas complètement — seule
+   la position du MARQUEUR est décalée, PLACES[id].lat/lng reste la vraie donnée
+   (utilisée pour panTo, fitBounds, directions...). */
+function spreadOverlappingPlaces(){
+  const THRESH_KM = 0.03; // 30 m
+  const SPREAD = 0.00035; // ~35-38 m de rayon d'écartement
+  const ids = Object.keys(PLACES);
+  const used = new Set();
+  const offsets = {};
+  for (let i = 0; i < ids.length; i++){
+    const a = ids[i]; if (used.has(a)) continue;
+    const cluster = [a];
+    for (let j = i+1; j < ids.length; j++){
+      const b = ids[j]; if (used.has(b)) continue;
+      if (haversine(PLACES[a], PLACES[b]) < THRESH_KM) cluster.push(b);
+    }
+    if (cluster.length > 1){
+      cluster.forEach(id => used.add(id));
+      const cLat = cluster.reduce((s,id) => s + PLACES[id].lat, 0) / cluster.length;
+      const cLng = cluster.reduce((s,id) => s + PLACES[id].lng, 0) / cluster.length;
+      cluster.forEach((id, k) => {
+        const angle = (2*Math.PI*k) / cluster.length;
+        offsets[id] = {
+          lat: cLat + SPREAD * Math.cos(angle),
+          lng: cLng + SPREAD * Math.sin(angle) / Math.cos(cLat * Math.PI/180)
+        };
+      });
+    }
+  }
+  return offsets;
+}
+
 /* ================================================================
    INIT
    ================================================================ */
@@ -117,10 +150,12 @@ function initApp(){
   new SkyOverlay(document.getElementById("skyOverlay")).setMap(map);
   geocoder = new google.maps.Geocoder();
 
+  const markerOffsets = spreadOverlappingPlaces();
   let fi = 0;
   for (const id of Object.keys(PLACES)){
     const p = PLACES[id];
-    const mk = new HTMLMarker(new google.maps.LatLng(p.lat, p.lng), pinHTML(p, null, "option", fi++), () => openSheet(id));
+    const pos = markerOffsets[id] || p;
+    const mk = new HTMLMarker(new google.maps.LatLng(pos.lat, pos.lng), pinHTML(p, null, "option", fi++), () => openSheet(id));
     mk.setMap(map);
     markers[id] = mk;
   }
@@ -174,26 +209,33 @@ function bindUI(){
     render();
   });
 
-  // sun/moon + slider
+  // sun/moon + slider — le preview reste affiché après le relâchement ; on ne
+  // revient à l'heure réelle qu'en tapant sur le soleil/lune ou sur "maintenant".
   const sunBtn = document.getElementById("sunBtn"), sunPanel = document.getElementById("sunPanel"), slider = document.getElementById("sunSlider");
+  const nowBtn = document.getElementById("nowBtn");
+  function revertToNow(closePanel){
+    previewing = false;
+    currentMinutes = nowMinutes();
+    slider.value = currentMinutes;
+    applyTime(currentMinutes, true);
+    if (closePanel) sunPanel.classList.remove("open");
+  }
   sunBtn.addEventListener("click", () => {
-    const opening = !sunPanel.classList.contains("open");
-    sunPanel.classList.toggle("open", opening);
-    if (opening){ slider.value = currentMinutes; updateSunTimeLabel(currentMinutes); }
+    const isOpen = sunPanel.classList.contains("open");
+    if (isOpen){
+      revertToNow(true);
+    } else {
+      sunPanel.classList.add("open");
+      slider.value = currentMinutes;
+      updateSunTimeLabel(currentMinutes);
+    }
   });
   slider.addEventListener("input", () => {
     previewing = true;
     const t = parseInt(slider.value, 10);
     applyTime(t, true);
   });
-  const endPreview = () => {
-    previewing = false;
-    currentMinutes = nowMinutes();
-    applyTime(currentMinutes, true);
-    sunPanel.classList.remove("open");
-  };
-  slider.addEventListener("touchend", endPreview);
-  slider.addEventListener("mouseup", endPreview);
+  nowBtn.addEventListener("click", () => revertToNow(false));
 
   document.getElementById("routeFab").addEventListener("click", toggleDayRoute);
 
@@ -268,33 +310,28 @@ function applyTime(t, animate){
     if (map) map.setOptions({ styles: period === "day" ? MAP_STYLE_LIGHT : MAP_STYLE });
   }
 
-  // couleurs : jour (quasi neutre) -> crépuscule (orange/violet façon météo Apple) -> nuit (bleu marine profond)
+  // jour/nuit : léger dégradé 2 teintes (couleur pilotée en JS). Crépuscule : dégradé fixe
+  // "Sunset Wedding Colors" défini en CSS (html.dusk #skyOverlay) — ici on ne pilote que l'intensité.
   const day1=[239,239,234], day2=[213,217,226];
-  const dusk1=[255,138,58],  dusk2=[142,45,158];
-  const night1=[10,10,28],   night2=[2,2,10];
-  let c1, c2, op, blend;
+  const night1=[10,10,28],  night2=[2,2,10];
+  let op, blend;
+  const root = document.documentElement.style;
 
   if (period === "day"){
-    c1 = day1; c2 = day2; op = 0.05; blend = "normal";
+    op = 0.05; blend = "normal";
+    root.setProperty("--overlay-c1", `rgba(${day1[0]},${day1[1]},${day1[2]},1)`);
+    root.setProperty("--overlay-c2", `rgba(${day2[0]},${day2[1]},${day2[2]},1)`);
   } else if (period === "dusk"){
     const k = (t - DUSK_START) / (NIGHT_START - DUSK_START); // 0 → 1 sur toute la fenêtre 16h-20h
-    const kColor = Math.min(1, k * 1.8); // le orangé arrive vite, puis on glisse vers le violet/nuit
-    c1 = [ lerp(day1[0],dusk1[0],kColor), lerp(day1[1],dusk1[1],kColor), lerp(day1[2],dusk1[2],kColor) ];
-    c2 = [ lerp(day2[0],dusk2[0],k), lerp(day2[1],dusk2[1],k), lerp(day2[2],dusk2[2],k) ];
-    if (k > 0.6){
-      const k2 = (k-0.6)/0.4;
-      c1 = [ lerp(dusk1[0],night1[0],k2), lerp(dusk1[1],night1[1],k2), lerp(dusk1[2],night1[2],k2) ];
-      c2 = [ lerp(dusk2[0],night2[0],k2), lerp(dusk2[1],night2[1],k2), lerp(dusk2[2],night2[2],k2) ];
-    }
-    op = lerp(0.5, 0.7, k);
+    // monte vite en intensité au début du crépuscule, puis redescend doucement vers la nuit
+    op = k < 0.45 ? lerp(0.2, 0.88, k/0.45) : lerp(0.88, 0.62, (k-0.45)/0.55);
     blend = "normal";
   } else {
-    c1 = night1; c2 = night2; op = 0.55; blend = "multiply";
+    op = 0.55; blend = "multiply";
+    root.setProperty("--overlay-c1", `rgba(${night1[0]},${night1[1]},${night1[2]},1)`);
+    root.setProperty("--overlay-c2", `rgba(${night2[0]},${night2[1]},${night2[2]},1)`);
   }
 
-  const root = document.documentElement.style;
-  root.setProperty("--overlay-c1", `rgba(${c1[0]|0},${c1[1]|0},${c1[2]|0},1)`);
-  root.setProperty("--overlay-c2", `rgba(${c2[0]|0},${c2[1]|0},${c2[2]|0},1)`);
   root.setProperty("--overlay-op", op.toFixed(2));
   root.setProperty("--overlay-blend", blend);
 
@@ -489,7 +526,17 @@ async function openItinerary(placeId){
   box.innerHTML = `<div class="itin-note">📍 Localisation…</div>`;
   let pos;
   try { pos = await getUserPos(); }
-  catch(e){ box.innerHTML = `<div class="itin-note">Géolocalisation refusée ou indisponible — active-la dans les réglages de ton navigateur.</div>`; return; }
+  catch(e){
+    // Un navigateur ne réaffiche jamais la popup d'autorisation une fois refusée —
+    // il faut expliquer où aller la réactiver à la main, avec un moyen de réessayer.
+    const denied = e && e.code === 1; // GeolocationPositionError.PERMISSION_DENIED
+    box.innerHTML = denied
+      ? `<div class="itin-note">Localisation bloquée pour ce site. Sur iPhone (Safari) : appuie sur l'icône "AA" ou le cadenas dans la barre d'adresse → Réglages du site → Position → Autoriser.</div>
+         <button class="itin-cta" onclick="openItinerary('${placeId}')">Réessayer</button>`
+      : `<div class="itin-note">Géolocalisation indisponible pour le moment.</div>
+         <button class="itin-cta" onclick="openItinerary('${placeId}')">Réessayer</button>`;
+    return;
+  }
 
   box.innerHTML = `
     <div class="itin-modes" id="itinModes-${placeId}">
