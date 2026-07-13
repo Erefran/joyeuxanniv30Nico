@@ -1,5 +1,5 @@
-const CACHE = 'bln30-v4';
-const SHELL = ['./', './index.html', './app.js', './data.js', './manifest.json', './icon-192.png', './icon-512.png', './audio/sisyphos-teaser.mp3'];
+const CACHE = 'bln30-v5';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './audio/sisyphos-teaser.mp3'];
 // Ces fichiers changent souvent pendant le développement — toujours vérifier la dernière
 // version en ligne avant de servir le cache (sinon un appareil qui a déjà visité le site
 // reste bloqué sur l'ancien app.js/data.js indéfiniment, même après un nouveau déploiement).

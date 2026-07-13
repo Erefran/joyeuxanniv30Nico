@@ -24,12 +24,22 @@
   --bg:#111;
   --radius:22px;
   --overlay-c1: transparent; --overlay-c2: transparent; --overlay-op: 0; --overlay-blend: multiply;
+  --surface-tint: rgba(255,255,255,.05);       /* fond subtil des cards (desc, itin, music, pills...) */
+  --surface-tint-strong: rgba(255,255,255,.07);
+  --why-bg: rgba(204,255,0,.06);
+  --why-text: #E4FFB0;
+  --accent-text: var(--acid);                   /* acid utilisé comme couleur de TEXTE (pas fond) */
 }
 html.day{
   --glass: rgba(255,255,255,.68); --glass-brd: rgba(20,20,24,.10);
   --text:#16161A; --muted:#68686f;
   --arc-stroke: rgba(0,0,0,.14);
   --bg:#EDEDE7;
+  --surface-tint: rgba(20,20,24,.045);
+  --surface-tint-strong: rgba(20,20,24,.06);
+  --why-bg: rgba(150,190,0,.12);
+  --why-text: #4a5c00;
+  --accent-text: #6b8a00;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; height:100%; overflow:hidden; background:var(--bg); transition:background .5s ease;}
@@ -151,6 +161,16 @@ input#sunSlider::-webkit-slider-thumb{
 #routeFab.on{ background:var(--acid); color:#0B0B0D; box-shadow:0 0 22px var(--acid-dim); border-color:var(--acid); }
 #routeFab:active{ transform:scale(.92); }
 
+#showAllBtn{
+  position:fixed; left:16px; bottom:calc(env(safe-area-inset-bottom,0) + 80px); z-index:25;
+  width:44px; height:44px; border-radius:50%;
+  background:var(--glass); backdrop-filter:blur(18px); border:1.5px solid var(--glass-brd);
+  box-shadow:0 8px 26px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; font-size:17px;
+  transition: all .2s;
+}
+#showAllBtn.on{ background:var(--acid); color:#0B0B0D; box-shadow:0 0 22px var(--acid-dim); border-color:var(--acid); }
+#showAllBtn:active{ transform:scale(.92); }
+
 /* ============ BOTTOM SHEET ============ */
 #backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; z-index:40; transition:opacity .3s; }
 #backdrop.show{ opacity:1; pointer-events:auto; }
@@ -187,7 +207,7 @@ input#sunSlider::-webkit-slider-thumb{
 @keyframes fadeIn{to{opacity:1;}}
 
 .info-grid{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:13px; }
-.info-pill{ background:rgba(255,255,255,.06); border:1px solid var(--glass-brd); border-radius:12px; padding:7px 11px; font-size:11.5px; font-weight:600; display:flex; align-items:center; gap:5px; }
+.info-pill{ background:var(--surface-tint); border:1px solid var(--glass-brd); border-radius:12px; padding:7px 11px; font-size:11.5px; font-weight:600; display:flex; align-items:center; gap:5px; }
 .info-pill.status-open{ color:#6FE28A; }
 .info-pill.status-soon{ color:#F2B84B; }
 .info-pill.status-closed{ color:#E27E6F; }
@@ -199,12 +219,12 @@ input#sunSlider::-webkit-slider-thumb{
 .hours-row{ font-size:12px; color:var(--muted); padding:4px 2px; border-bottom:1px solid var(--glass-brd); }
 .hours-row:last-child{ border-bottom:none; }
 
-.desc-card{ background:rgba(255,255,255,.05); border-left:3px solid var(--acid); border-radius:0 14px 14px 0; padding:12px 14px; font-size:13.5px; line-height:1.55; margin-bottom:10px; }
-.why-card{ background:rgba(204,255,0,.06); border-left:3px solid var(--acid); border-radius:0 14px 14px 0; padding:12px 14px; font-size:13px; line-height:1.5; margin-bottom:14px; color:#E4FFB0; }
-.why-card b{ color:var(--acid); }
+.desc-card{ background:var(--surface-tint); border-left:3px solid var(--acid); border-radius:0 14px 14px 0; padding:12px 14px; font-size:13.5px; line-height:1.55; margin-bottom:10px; }
+.why-card{ background:var(--why-bg); border-left:3px solid var(--acid); border-radius:0 14px 14px 0; padding:12px 14px; font-size:13px; line-height:1.5; margin-bottom:14px; color:var(--why-text); }
+.why-card b{ color:var(--accent-text); }
 
 /* music button (clubs) */
-.music-row{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.05); border:1px solid var(--glass-brd); border-radius:14px; padding:10px 12px; margin-bottom:14px; }
+.music-row{ display:flex; align-items:center; gap:10px; background:var(--surface-tint); border:1px solid var(--glass-brd); border-radius:14px; padding:10px 12px; margin-bottom:14px; }
 .music-btn{ width:36px; height:36px; border-radius:50%; background:var(--acid); color:#0B0B0D; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
 .music-meta{ flex:1; font-size:12px; }
 .music-meta b{ display:block; font-size:12.5px; }
@@ -214,10 +234,10 @@ input#sunSlider::-webkit-slider-thumb{
 @keyframes eq{0%,100%{transform:scaleY(.35);}50%{transform:scaleY(1);}}
 
 /* itinerary block inside sheet */
-.itin-card{ background:rgba(255,255,255,.045); border:1px solid var(--glass-brd); border-radius:16px; padding:14px; margin-bottom:14px; }
+.itin-card{ background:var(--surface-tint); border:1px solid var(--glass-brd); border-radius:16px; padding:14px; margin-bottom:14px; }
 .itin-head{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; margin-bottom:10px; }
 .itin-modes{ display:flex; gap:7px; margin-bottom:4px; }
-.mode-btn{ flex:1; padding:10px 6px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--glass-brd); text-align:center; font-size:11.5px; }
+.mode-btn{ flex:1; padding:10px 6px; border-radius:12px; background:var(--surface-tint); border:1px solid var(--glass-brd); text-align:center; font-size:11.5px; }
 .mode-btn .mi{ font-size:17px; display:block; margin-bottom:3px; }
 .mode-btn.active{ background:var(--acid); color:#0B0B0D; border-color:var(--acid); }
 .mode-btn.loading{ opacity:.45; }
@@ -226,12 +246,12 @@ input#sunSlider::-webkit-slider-thumb{
 
 .actions{ display:flex; gap:9px; }
 .btn{ flex:1; padding:13px; border-radius:14px; font-weight:700; font-size:13.5px; text-align:center; }
-.btn-ghost{ background:rgba(255,255,255,.07); border:1px solid var(--glass-brd); }
+.btn-ghost{ background:var(--surface-tint-strong); border:1px solid var(--glass-brd); }
 .btn-reaction{ display:flex; align-items:center; justify-content:center; gap:6px; }
 
 /* reaction picker */
 .reactions{ display:flex; gap:8px; margin-bottom:12px; }
-.react-btn{ flex:1; padding:9px 0; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--glass-brd); font-size:17px; text-align:center; position:relative; }
+.react-btn{ flex:1; padding:9px 0; border-radius:12px; background:var(--surface-tint); border:1px solid var(--glass-brd); font-size:17px; text-align:center; position:relative; }
 .react-count{ position:absolute; top:-5px; right:-2px; background:var(--acid); color:#0B0B0D; font-size:9px; font-weight:800; border-radius:8px; padding:1px 4px; min-width:14px; }
 
 /* toast */
@@ -333,6 +353,7 @@ input#sunSlider::-webkit-slider-thumb{
 </div>
 
 <button id="routeFab">🧭</button>
+<button id="showAllBtn" title="Voir tous les lieux du programme">👁️</button>
 
 <div id="sheet">
   <div class="grab-zone" id="grabHandle"><div class="grab"></div></div>
@@ -358,7 +379,7 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script src="data.js?v=20260714b"></script>
+<script src="app.js?v=20260714b"></script>
 </body>
 </html>

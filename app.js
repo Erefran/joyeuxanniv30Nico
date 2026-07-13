@@ -1,6 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
+console.log("BLN30 build 20260714b"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -19,6 +20,7 @@ let markers = {};
 let dayRouteLines = [], dayLegBadges = [];
 let itinLines = [];
 let mode = "prog", day = "ven", cat = "all";
+let showAllRegardless = false;  // bouton "œil" en mode Programme : ignore le fondu horaire
 let previewing = false;         // true pendant qu'on tient le slider
 let currentMinutes = nowMinutes();
 let realTimeTimer = null;
@@ -192,8 +194,14 @@ function bindUI(){
     document.getElementById("catChips").style.display = mode === "explo" ? "" : "none";
     clearDayRoute();
     document.getElementById("routeFab").style.display = mode === "prog" ? "" : "none";
+    document.getElementById("showAllBtn").style.display = mode === "prog" ? "" : "none";
     render();
   }));
+  document.getElementById("showAllBtn").addEventListener("click", () => {
+    showAllRegardless = !showAllRegardless;
+    document.getElementById("showAllBtn").classList.toggle("on", showAllRegardless);
+    render();
+  });
   document.getElementById("dayChips").addEventListener("click", e => {
     const b = e.target.closest(".chip"); if (!b) return;
     day = b.dataset.day;
@@ -356,6 +364,17 @@ function applyTime(t, animate){
 }
 
 function updateCategoryVisibility(t, period){
+  // Explorer : on veut tout voir peu importe l'heure. Programme : idem si le
+  // bouton "œil" (showAllRegardless) a été activé — sinon fondu habituel.
+  if (mode === "explo" || showAllRegardless){
+    for (const id of Object.keys(PLACES)){
+      const mk = markers[id]; if (!mk || !mk.el) continue;
+      const bubble = mk.el.querySelector(".pin-bubble");
+      if (bubble) bubble.style.opacity = ""; // revient à l'opacité par défaut du CSS (primary=1, option=.72)
+    }
+    return;
+  }
+
   let kNight;
   if (period === "day") kNight = 0;
   else if (period === "night") kNight = 1;
