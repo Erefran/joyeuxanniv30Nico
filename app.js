@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714b"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260714c"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -85,13 +85,20 @@ function makeHTMLMarkerClass(){
 
 /* Voile ciel (jour/crépuscule/nuit) rattaché au pane "overlayLayer" de Google Maps,
    qui est sous les pins (overlayMouseTarget) — sinon le voile peint par-dessus les
-   pins et les rend délavés quelle que soit leur opacité JS. */
+   pins et les rend délavés quelle que soit leur opacité JS.
+   Le pane overlayLayer n'a pas de hauteur CSS définie : un enfant en inset:0 s'y
+   effondre à 0px (confirmé en live). On donne donc une taille en pixels explicite,
+   recalculée à chaque draw() (zoom/pan/resize). */
 function makeSkyOverlayClass(){
   return class SkyOverlay extends google.maps.OverlayView {
-    constructor(el){ super(); this.el = el; }
+    constructor(el){ super(); this.el = el; this.el.style.position = "absolute"; this.el.style.left = "0px"; this.el.style.top = "0px"; }
     onAdd(){ this.getPanes().overlayLayer.appendChild(this.el); }
     onRemove(){ /* le noeud reste réutilisable, on ne le détruit pas */ }
-    draw(){}
+    draw(){
+      const mapDiv = this.getMap().getDiv();
+      this.el.style.width = mapDiv.clientWidth + "px";
+      this.el.style.height = mapDiv.clientHeight + "px";
+    }
   };
 }
 
@@ -149,7 +156,9 @@ function initApp(){
   dirSvc = new google.maps.DirectionsService();
 
   const SkyOverlay = makeSkyOverlayClass();
-  new SkyOverlay(document.getElementById("skyOverlay")).setMap(map);
+  const skyOverlay = new SkyOverlay(document.getElementById("skyOverlay"));
+  skyOverlay.setMap(map);
+  window.addEventListener("resize", () => skyOverlay.draw());
   geocoder = new google.maps.Geocoder();
 
   const markerOffsets = spreadOverlappingPlaces();
