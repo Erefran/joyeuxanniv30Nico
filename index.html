@@ -23,7 +23,8 @@
   --arc-stroke: rgba(255,255,255,.12);
   --bg:#111;
   --radius:22px;
-  --overlay-c1: transparent; --overlay-c2: transparent; --overlay-op: 0; --overlay-blend: multiply;
+  --overlay-c1: transparent; --overlay-c2: transparent; --overlay-c3: transparent; --overlay-c4: transparent;
+  --overlay-op: 0; --overlay-blend: normal;
   --surface-tint: rgba(255,255,255,.05);       /* fond subtil des cards (desc, itin, music, pills...) */
   --surface-tint-strong: rgba(255,255,255,.07);
   --why-bg: rgba(204,255,0,.06);
@@ -64,18 +65,10 @@ img{-webkit-user-drag:none;}
   /* position/largeur/hauteur posées en JS (draw()) — le pane overlayLayer n'a pas
      de hauteur CSS, inset:0 s'y effondrerait à 0px */
   pointer-events:none;
-  background: linear-gradient(165deg, var(--overlay-c1) 0%, var(--overlay-c2) 100%);
+  background: linear-gradient(165deg, var(--overlay-c1) 0%, var(--overlay-c2) 30%, var(--overlay-c3) 70%, var(--overlay-c4) 100%);
   opacity: var(--overlay-op);
-  mix-blend-mode: var(--overlay-blend, multiply);
+  mix-blend-mode: var(--overlay-blend, normal);
   transition: opacity .5s ease;
-}
-/* Coucher de soleil : dégradé fixe façon "Sunset Wedding Colors" plutôt qu'une
-   interpolation à 2 teintes — seule l'intensité (opacity) bouge dans le temps. */
-html.dusk #skyOverlay{
-  background: linear-gradient(165deg,
-    #393E75 0%, #644B80 14%, #8E588A 28%, #B5698E 42%,
-    #DC7A91 55%, #ED8990 66%, #FE978E 76%, #FEA98E 85%,
-    #FEBB8E 93%, #FFD99E 100%);
 }
 
 /* sun/moon arc */
@@ -391,7 +384,7 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<script src="data.js?v=20260714e"></script>
-<script src="app.js?v=20260714e"></script>
+<script src="data.js?v=20260714f"></script>
+<script src="app.js?v=20260714f"></script>
 </body>
 </html>

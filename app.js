@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714e"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260714f"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -323,42 +323,63 @@ function updateSunTimeLabel(t){
   document.getElementById("sunTime").textContent = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
-let currentPeriod = null; // "day" | "dusk" | "night" — évite de re-swapper le style de carte à chaque tick
+let currentPeriod = null;       // "day" | "dusk" | "night" — pour ne toucher au DOM que sur changement
+let currentMapStyleKey = null;  // "light" | "dark" — indépendant de currentPeriod (voir plus bas)
+
+function lerp3(a, b, t){ return [ lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t) ]; }
+function stops4(a, b, t){ return a.map((c, i) => lerp3(c, b[i], t)); }
+
+/* Dégradé ciel à 4 arrêts (0/30/70/100%), interpolé entre 3 "ambiances" au fil du
+   crépuscule : pâle (posé sur la carte encore claire) → vif (palette "Sunset Wedding
+   Colors" fournie) → profond (bascule violette vers la nuit). La nuit réutilise
+   exactement l'ambiance "profond" (même couleurs/opacité/blend) pour qu'il n'y ait
+   AUCUNE coupure visible à 20h — juste une continuation. */
+const SKY_DAY   = [[239,239,234],[233,235,231],[221,224,228],[213,217,226]];
+const SKY_PALE  = [[224,214,236],[236,209,224],[255,213,204],[255,231,209]]; // 16h : à peine teinté
+const SKY_VIVID = [[57,62,117],[142,88,138],[254,151,142],[255,217,158]];    // pic crépuscule : sa palette exacte
+const SKY_DEEP  = [[35,29,64],[45,22,41],[38,17,26],[21,11,18]];             // fin de crépuscule → nuit, violet/prune foncé
+const SKY_NIGHT = SKY_DEEP; // nuit = continuité directe de la fin du crépuscule
 
 function applyTime(t, animate){
   updateSunTimeLabel(t);
 
   const period = (t >= DAY_START && t < DUSK_START) ? "day" : (t >= DUSK_START && t < NIGHT_START) ? "dusk" : "night";
+  const kDusk = period === "dusk" ? (t - DUSK_START) / (NIGHT_START - DUSK_START) : (period === "day" ? 0 : 1);
 
   if (period !== currentPeriod){
     currentPeriod = period;
     document.documentElement.classList.remove("day", "dusk", "night");
     document.documentElement.classList.add(period);
-    if (map) map.setOptions({ styles: period === "day" ? MAP_STYLE_LIGHT : MAP_STYLE });
   }
 
-  // jour/nuit : léger dégradé 2 teintes (couleur pilotée en JS). Crépuscule : dégradé fixe
-  // "Sunset Wedding Colors" défini en CSS (html.dusk #skyOverlay) — ici on ne pilote que l'intensité.
-  const day1=[239,239,234], day2=[213,217,226];
-  const night1=[10,10,28],  night2=[2,2,10];
-  let op, blend;
-  const root = document.documentElement.style;
+  // Le style de carte (clair/sombre) reste clair jusqu'à bien avancer dans le crépuscule
+  // (72%) plutôt que de basculer d'un coup à 16h — sinon toute la fenêtre 16h-20h démarre
+  // déjà assombrie et le fondu depuis le jour ne se voit pas.
+  const wantDarkMap = period === "night" || (period === "dusk" && kDusk >= 0.72);
+  const mapKey = wantDarkMap ? "dark" : "light";
+  if (mapKey !== currentMapStyleKey){
+    currentMapStyleKey = mapKey;
+    if (map) map.setOptions({ styles: wantDarkMap ? MAP_STYLE : MAP_STYLE_LIGHT });
+  }
 
+  let stops, op, blend = "normal";
   if (period === "day"){
-    op = 0.05; blend = "normal";
-    root.setProperty("--overlay-c1", `rgba(${day1[0]},${day1[1]},${day1[2]},1)`);
-    root.setProperty("--overlay-c2", `rgba(${day2[0]},${day2[1]},${day2[2]},1)`);
-  } else if (period === "dusk"){
-    const k = (t - DUSK_START) / (NIGHT_START - DUSK_START); // 0 → 1 sur toute la fenêtre 16h-20h
-    // monte vite en intensité au début du crépuscule, puis redescend doucement vers la nuit
-    op = k < 0.45 ? lerp(0.2, 0.88, k/0.45) : lerp(0.88, 0.62, (k-0.45)/0.55);
-    blend = "normal";
+    stops = SKY_DAY; op = 0.05;
+  } else if (period === "night"){
+    stops = SKY_NIGHT; op = 0.74;
+  } else if (kDusk < 0.55){
+    stops = stops4(SKY_PALE, SKY_VIVID, kDusk/0.55);
+    op = lerp(0.14, 0.58, kDusk/0.55);
   } else {
-    op = 0.55; blend = "multiply";
-    root.setProperty("--overlay-c1", `rgba(${night1[0]},${night1[1]},${night1[2]},1)`);
-    root.setProperty("--overlay-c2", `rgba(${night2[0]},${night2[1]},${night2[2]},1)`);
+    stops = stops4(SKY_VIVID, SKY_DEEP, (kDusk-0.55)/0.45);
+    op = lerp(0.58, 0.74, (kDusk-0.55)/0.45);
   }
 
+  const root = document.documentElement.style;
+  ["--overlay-c1","--overlay-c2","--overlay-c3","--overlay-c4"].forEach((varName, i) => {
+    const c = stops[i];
+    root.setProperty(varName, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},1)`);
+  });
   root.setProperty("--overlay-op", op.toFixed(2));
   root.setProperty("--overlay-blend", blend);
 
