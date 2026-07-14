@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714d"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260714e"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -88,9 +88,9 @@ function makeHTMLMarkerClass(){
    pins et les rend délavés quelle que soit leur opacité JS.
    Le pane overlayLayer est décalé en interne via un transform (pour le pan fluide) :
    son origine locale (0,0) ne correspond PAS au coin haut-gauche du viewport visible.
-   On utilise donc fromContainerPixelToDivPixel (coordonnées viewport → coordonnées
-   pane) pour calculer position ET taille à chaque draw(), sinon le voile ne couvre
-   qu'un coin de la carte (confirmé en live) au lieu de tout l'écran. */
+   MapCanvasProjection n'a pas de méthode directe "container pixel → div pixel" ;
+   on passe donc par LatLng (fromContainerPixelToLatLng puis fromLatLngToDivPixel),
+   qui sont les deux seules conversions réellement documentées par l'API. */
 function makeSkyOverlayClass(){
   return class SkyOverlay extends google.maps.OverlayView {
     constructor(el){ super(); this.el = el; this.el.style.position = "absolute"; }
@@ -99,8 +99,11 @@ function makeSkyOverlayClass(){
     draw(){
       const proj = this.getProjection(); if (!proj) return;
       const mapDiv = this.getMap().getDiv();
-      const tl = proj.fromContainerPixelToDivPixel(new google.maps.Point(0, 0));
-      const br = proj.fromContainerPixelToDivPixel(new google.maps.Point(mapDiv.clientWidth, mapDiv.clientHeight));
+      const tlLatLng = proj.fromContainerPixelToLatLng(new google.maps.Point(0, 0));
+      const brLatLng = proj.fromContainerPixelToLatLng(new google.maps.Point(mapDiv.clientWidth, mapDiv.clientHeight));
+      if (!tlLatLng || !brLatLng) return;
+      const tl = proj.fromLatLngToDivPixel(tlLatLng);
+      const br = proj.fromLatLngToDivPixel(brLatLng);
       this.el.style.left = tl.x + "px";
       this.el.style.top = tl.y + "px";
       this.el.style.width = (br.x - tl.x) + "px";
