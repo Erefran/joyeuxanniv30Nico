@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714f"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260714g"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -25,6 +25,7 @@ let previewing = false;         // true pendant qu'on tient le slider
 let currentMinutes = nowMinutes();
 let realTimeTimer = null;
 let userPos = null;             // géoloc mise en cache
+let meMarker = null;            // pastille bleue "ma position"
 const legCache = {}, detailCache = {}, dirCache = {};
 let audioEl = null, playingId = null;
 let tapCount = 0, tapTimer = null;
@@ -80,6 +81,7 @@ function makeHTMLMarkerClass(){
     onRemove(){ this.el.remove(); }
     draw(){ const p = this.getProjection().fromLatLngToDivPixel(this.pos); if (p){ this.el.style.left = p.x+"px"; this.el.style.top = p.y+"px"; } }
     setVisible(v){ this.el.style.display = v ? "" : "none"; }
+    setPosition(pos){ this.pos = pos; this.draw(); }
   };
 }
 
@@ -221,6 +223,7 @@ function bindUI(){
     document.getElementById("showAllBtn").classList.toggle("on", showAllRegardless);
     render();
   });
+  document.getElementById("recenterBtn").addEventListener("click", recenterOnMe);
   document.getElementById("dayChips").addEventListener("click", e => {
     const b = e.target.closest(".chip"); if (!b) return;
     day = b.dataset.day;
@@ -266,8 +269,9 @@ function bindUI(){
 
   document.getElementById("routeFab").addEventListener("click", toggleDayRoute);
 
-  // sheet drag
-  const sheet = document.getElementById("sheet"), grab = document.getElementById("grabHandle"), backdrop = document.getElementById("backdrop");
+  // sheet drag — toute la zone d'en-tête (poignée + emoji/titre/note) sert de prise,
+  // pas juste la petite barre du haut (trop dure à viser au doigt sur mobile).
+  const sheet = document.getElementById("sheet"), sheetHeader = document.getElementById("sheetHeader"), backdrop = document.getElementById("backdrop");
   let dragging=false, startY=0, startH=0;
   const PEEK=()=>window.innerHeight*0.5, FULL=()=>window.innerHeight*0.86;
   window._sheetH = 0;
@@ -288,13 +292,14 @@ function bindUI(){
     else if (window._sheetH < (peek+FULL())/2) setH(peek, true);
     else setH(FULL(), true);
   }
-  grab.addEventListener("pointerdown", e => {
-    grab.setPointerCapture(e.pointerId);
+  sheetHeader.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return; // ne pas amorcer le drag depuis un bouton (mute, etc.)
+    sheetHeader.setPointerCapture(e.pointerId);
     dragStart(e.clientY);
   });
-  grab.addEventListener("pointermove", e => dragMove(e.clientY));
-  grab.addEventListener("pointerup", dragEnd);
-  grab.addEventListener("pointercancel", dragEnd);
+  sheetHeader.addEventListener("pointermove", e => dragMove(e.clientY));
+  sheetHeader.addEventListener("pointerup", dragEnd);
+  sheetHeader.addEventListener("pointercancel", dragEnd);
   backdrop.addEventListener("click", closeSheet);
   setH(0,false);
 
@@ -562,9 +567,9 @@ function animatePolyline(fullPath, storeArr, duration){
    ================================================================ */
 function clearItinLines(){ itinLines.forEach(l=>l.setMap(null)); itinLines=[]; }
 
-function getUserPos(){
+function getUserPos(force){
   return new Promise((resolve, reject) => {
-    if (userPos) return resolve(userPos);
+    if (userPos && !force) return resolve(userPos);
     if (!navigator.geolocation) return reject("no-geo");
     navigator.geolocation.getCurrentPosition(
       pos => { userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(userPos); },
@@ -572,6 +577,27 @@ function getUserPos(){
       { timeout: 8000 }
     );
   });
+}
+
+/* Bouton "recentrer sur moi" : géolocalisation navigateur pure, aucune clé/API
+   Google en plus n'est nécessaire (Maps ne fait qu'afficher le point une fois
+   qu'on a la position). force=true : on ignore le cache pour avoir une position
+   à jour à chaque tap, contrairement à l'itinéraire qui réutilise la même fixe. */
+async function recenterOnMe(){
+  try {
+    const pos = await getUserPos(true);
+    const latLng = new google.maps.LatLng(pos.lat, pos.lng);
+    map.panTo(latLng);
+    map.setZoom(15);
+    if (meMarker) meMarker.setPosition(latLng);
+    else {
+      meMarker = new window.HTMLMarker(latLng, `<div class="me-pin"><div class="me-dot"></div></div>`, () => {});
+      meMarker.setMap(map);
+    }
+  } catch(e){
+    const denied = e && e.code === 1;
+    toast(denied ? "📍 Localisation bloquée — Réglages Safari > ce site > Position > Autoriser" : "📍 Localisation indisponible pour le moment");
+  }
 }
 
 const MODES = [
@@ -642,16 +668,27 @@ function setMusicPlaying(id){
     const on = b.dataset.pid === id;
     b.textContent = on ? "⏸" : "▶";
   });
+  document.querySelectorAll(".mute-btn").forEach(b => {
+    const on = b.dataset.pid === id;
+    b.textContent = on ? "🔊" : "🔇";
+  });
   document.querySelectorAll(".eq-wrap").forEach(e => e.style.display = e.dataset.pid === id ? "inline-flex" : "none");
 }
-function toggleMusic(id){
-  if (playingId === id){ audioEl.pause(); setMusicPlaying(null); return; }
+function playMusicFor(id){
+  if (playingId === id) return; // déjà en lecture pour ce lieu
   audioEl.currentTime = 0;
   setMusicPlaying(id); // optimiste : le bouton passe en "pause" tout de suite
   audioEl.play().catch(() => {
     setMusicPlaying(null);
     toast("🔇 Lecture impossible — le navigateur a bloqué la lecture ou le fichier est introuvable");
   });
+}
+function stopMusic(){
+  if (playingId !== null){ audioEl.pause(); setMusicPlaying(null); }
+}
+function toggleMusic(id){
+  if (playingId === id) stopMusic();
+  else playMusicFor(id);
 }
 
 /* ================================================================
@@ -716,19 +753,24 @@ function openSheet(id){
   const mk = markers[id];
   if (mk && mk.el){ mk.el.classList.add("tapping"); setTimeout(()=>mk.el.classList.remove("tapping"),350); mk.el.classList.add("active"); }
 
+  const peek = document.getElementById("sheetPeek");
   const body = document.getElementById("sheetScroll");
   const react = getReactions(id);
   const reactEmojis = ["❤️","🔥","🕺","😂"];
 
-  body.innerHTML = `
+  peek.innerHTML = `
     <div class="peek-row">
       <div class="peek-emoji">${p.emoji}</div>
       <div style="flex:1;">
         <div class="peek-title">${p.name}</div>
         <div class="peek-sub"><span id="shRating-${id}">…</span><span class="dots" id="shPrice-${id}"></span></div>
       </div>
+      ${p.music ? `<button class="mute-btn" data-pid="${id}" onclick="event.stopPropagation(); toggleMusic('${id}')">${playingId===id?'🔊':'🔇'}</button>` : ``}
     </div>
     <div class="expand-hint">⌃ glisse vers le haut pour tout voir</div>
+  `;
+
+  body.innerHTML = `
     <div class="photos" id="shPhotos-${id}"><div class="photo"></div><div class="photo"></div><div class="photo"></div></div>
     <div class="info-grid" id="shInfo-${id}"></div>
     <div class="hours-list" id="shHours-${id}"></div>
@@ -755,6 +797,9 @@ function openSheet(id){
   document.getElementById("sheetScroll").scrollTop = 0;
   openSheetToContent();
   map.panTo({ lat: p.lat, lng: p.lng });
+
+  if (p.music) playMusicFor(id);
+  else if (playingId !== null) stopMusic();
 
   if (!p.pid){
     document.getElementById(`shRating-${id}`).textContent = "";
@@ -797,7 +842,7 @@ function openSheet(id){
     else { document.getElementById(`shRating-${id}`).textContent=""; }
   });
 }
-function closeSheet(){ openPlaceId = null; window._setSheetH(0, true); clearItinLines(); document.querySelectorAll(".pin").forEach(el => el.classList.remove("active")); }
+function closeSheet(){ openPlaceId = null; window._setSheetH(0, true); clearItinLines(); stopMusic(); document.querySelectorAll(".pin").forEach(el => el.classList.remove("active")); }
 function reactClick(id, emoji){
   const r = bumpReaction(id, emoji);
   openSheet(id); // re-render pour mettre à jour les compteurs

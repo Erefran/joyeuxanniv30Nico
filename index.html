@@ -118,6 +118,14 @@ img{-webkit-user-drag:none;}
 .ampelmann{ width:16px; height:16px; }
 .u-roundel{ width:16px; height:16px; border-radius:50%; background:var(--u-blue); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:1.5px solid #fff; }
 
+/* pastille "ma position" */
+.me-pin{ width:20px; height:20px; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); position:absolute; z-index:7; }
+.me-dot{ width:14px; height:14px; border-radius:50%; background:#4285F4; border:3px solid #fff; animation: mePulse 2s ease-in-out infinite; }
+@keyframes mePulse{
+  0%,100%{ box-shadow:0 0 0 4px rgba(66,133,244,.32), 0 2px 6px rgba(0,0,0,.3); }
+  50%{ box-shadow:0 0 0 9px rgba(66,133,244,.14), 0 2px 6px rgba(0,0,0,.3); }
+}
+
 /* ============ TOPBAR ============ */
 #topbar{ position:fixed; top:0; left:0; right:0; z-index:30; padding:calc(env(safe-area-inset-top,0) + 12px) 14px 0; pointer-events:none; }
 #topbar > *{ pointer-events:auto; }
@@ -155,43 +163,50 @@ input#sunSlider::-webkit-slider-thumb{
 }
 .sun-reset{ font-size:11px; color:var(--muted); text-align:center; margin-top:4px; }
 
-/* ============ ROUTE FAB (bottom-left) ============ */
-#routeFab{
+/* ============ PILE DE BOUTONS FLOTTANTS (bas-gauche) ============ */
+/* recenterBtn reste toujours visible (utile en Explorer aussi), en dernier dans le
+   DOM donc tout en bas de la pile ; showAllBtn et routeFab sont cachés hors mode
+   Programme — le flex + gap gère l'espacement quel que soit ce qui est affiché. */
+#fabStack{
   position:fixed; left:16px; bottom:calc(env(safe-area-inset-bottom,0) + 20px); z-index:25;
+  display:flex; flex-direction:column; gap:10px; align-items:flex-start;
+}
+#fabStack button{
   width:52px; height:52px; border-radius:50%;
   background:var(--glass); backdrop-filter:blur(18px); border:1.5px solid var(--glass-brd);
   box-shadow:0 8px 26px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; font-size:21px;
   transition: all .2s;
 }
-#routeFab.on{ background:var(--acid); color:#0B0B0D; box-shadow:0 0 22px var(--acid-dim); border-color:var(--acid); }
-#routeFab:active{ transform:scale(.92); }
-
-#showAllBtn{
-  position:fixed; left:16px; bottom:calc(env(safe-area-inset-bottom,0) + 80px); z-index:25;
-  width:44px; height:44px; border-radius:50%;
-  background:var(--glass); backdrop-filter:blur(18px); border:1.5px solid var(--glass-brd);
-  box-shadow:0 8px 26px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; font-size:17px;
-  transition: all .2s;
-}
-#showAllBtn.on{ background:var(--acid); color:#0B0B0D; box-shadow:0 0 22px var(--acid-dim); border-color:var(--acid); }
-#showAllBtn:active{ transform:scale(.92); }
+#fabStack button.on{ background:var(--acid); color:#0B0B0D; box-shadow:0 0 22px var(--acid-dim); border-color:var(--acid); }
+#fabStack button:active{ transform:scale(.92); }
+#showAllBtn{ width:44px; height:44px; font-size:17px; }
 
 /* ============ BOTTOM SHEET ============ */
 #backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; z-index:40; transition:opacity .3s; }
 #backdrop.show{ opacity:1; pointer-events:auto; }
 #sheet{
   position:fixed; left:0; right:0; bottom:0; z-index:50;
+  /* hauteur fixe = viewport entier : le reveal se fait uniquement via translateY,
+     ce qui rend le calcul exact quel que soit le contenu (sinon .sheet-scroll ne
+     peut pas savoir sur quelle hauteur se limiter pour pouvoir scroller). */
+  height:100vh; height:100dvh;
   background:var(--glass); backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
   border-top:1px solid var(--glass-brd); border-radius:26px 26px 0 0; box-shadow:0 -10px 50px rgba(0,0,0,.4);
-  transform:translateY(100%); touch-action:none; padding-bottom:env(safe-area-inset-bottom,0);
+  transform:translateY(100%); padding-bottom:env(safe-area-inset-bottom,0);
+  display:flex; flex-direction:column;
 }
 #sheet.animate{ transition:transform .38s cubic-bezier(.32,.9,.34,1); }
-.grab-zone{ padding:12px 0 10px; display:flex; justify-content:center; touch-action:none; cursor:grab; }
-.grab-zone:active{ cursor:grabbing; }
+/* Zone de drag = poignée + en-tête (emoji/titre/note) : c'est TOUTE cette zone qui
+   doit rester fixe et servir à glisser la card, pas juste la petite barre du haut.
+   touch-action:none y est scopé exprès — SANS ça sur #sheet entier, elle bloquait
+   aussi le scroll tactile natif de .sheet-scroll juste en dessous. */
+#sheetHeader{ touch-action:none; cursor:grab; flex-shrink:0; }
+#sheetHeader:active{ cursor:grabbing; }
+.grab-zone{ padding:12px 0 10px; display:flex; justify-content:center; }
 .grab{ width:38px; height:4px; border-radius:4px; background:var(--glass-brd); }
-.sheet-scroll{ max-height:82vh; overflow-y:auto; padding:0 20px 24px; }
+.sheet-scroll{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:0 20px 24px; }
 
-.peek-row{ display:flex; align-items:center; gap:12px; padding:8px 0 4px; }
+.peek-row{ display:flex; align-items:center; gap:12px; padding:8px 20px 4px; position:relative; }
 .peek-emoji{ font-size:32px; }
 .peek-title{ font-weight:800; font-size:18.5px; line-height:1.2; }
 .peek-sub{ font-size:12px; color:var(--muted); margin-top:3px; display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
@@ -199,6 +214,7 @@ input#sunSlider::-webkit-slider-thumb{
 .dots span{ width:5px; height:5px; border-radius:50%; background:var(--glass-brd); }
 .dots span.on{ background:var(--acid); }
 .expand-hint{ text-align:center; font-size:10.5px; color:var(--muted); margin:2px 0 10px; }
+.mute-btn{ width:34px; height:34px; border-radius:50%; background:var(--surface-tint-strong); border:1px solid var(--glass-brd); font-size:15px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
 .photos{ display:flex; gap:8px; overflow-x:auto; margin:0 -20px 13px; padding:0 20px; scrollbar-width:none; }
 .photos::-webkit-scrollbar{display:none;}
@@ -357,11 +373,17 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<button id="routeFab">🧭</button>
-<button id="showAllBtn" title="Voir tous les lieux du programme">👁️</button>
+<div id="fabStack">
+  <button id="showAllBtn" title="Voir tous les lieux du programme">👁️</button>
+  <button id="routeFab">🧭</button>
+  <button id="recenterBtn" title="Centrer sur ma position">🎯</button>
+</div>
 
 <div id="sheet">
-  <div class="grab-zone" id="grabHandle"><div class="grab"></div></div>
+  <div id="sheetHeader">
+    <div class="grab-zone"><div class="grab"></div></div>
+    <div id="sheetPeek"></div>
+  </div>
   <div class="sheet-scroll" id="sheetScroll"></div>
 </div>
 
@@ -384,7 +406,7 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<script src="data.js?v=20260714f"></script>
-<script src="app.js?v=20260714f"></script>
+<script src="data.js?v=20260714g"></script>
+<script src="app.js?v=20260714g"></script>
 </body>
 </html>
