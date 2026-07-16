@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260715a"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260716a"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -11,6 +11,11 @@ const DUSK_START = 16 * 60;       // 16:00 — coucher de soleil
 const NIGHT_START = 20 * 60;      // 20:00 — nuit
 const NIGHT_CATS = new Set(["bar", "club", "sunset"]);
 const DAY_CATS = new Set(["brunch", "breakfast", "patisserie", "cafe"]);
+
+/* Easter egg "tu divagues" : zone large couvrant Berlin + périphérie proche.
+   Se déclenche seulement si on est ET dézoomé ET sorti de cette zone. */
+const BERLIN_BOUNDS = { north: 52.68, south: 52.33, east: 13.77, west: 13.05 };
+const DIVAGUE_MAX_ZOOM = 10;
 
 /* ================================================================
    STATE
@@ -166,6 +171,7 @@ function initApp(){
   });
   placesSvc = new google.maps.places.PlacesService(map);
   dirSvc = new google.maps.DirectionsService();
+  map.addListener("idle", checkBerlinBounds);
 
   const SkyOverlay = makeSkyOverlayClass();
   const skyOverlay = new SkyOverlay(document.getElementById("skyOverlay"));
@@ -318,6 +324,7 @@ function bindUI(){
     if (tapCount >= 5){ tapCount = 0; triggerEgg(); }
   });
   document.getElementById("eggOverlay").addEventListener("click", () => document.getElementById("eggOverlay").classList.remove("show"));
+  document.getElementById("divagueOverlay").addEventListener("click", () => document.getElementById("divagueOverlay").classList.remove("show"));
 }
 
 /* ================================================================
@@ -911,6 +918,24 @@ function triggerEgg(){
   }
   overlay.classList.add("show");
   burstConfetti();
+}
+
+/* ================================================================
+   EASTER EGG — "tu divagues" (dézoomé et sorti de Berlin)
+   ================================================================ */
+let divagueShown = false; // évite de spammer à chaque micro-mouvement de carte
+
+function checkBerlinBounds(){
+  if (!map) return;
+  const c = map.getCenter(); if (!c) return;
+  const zoom = map.getZoom();
+  const inside = c.lat() <= BERLIN_BOUNDS.north && c.lat() >= BERLIN_BOUNDS.south
+              && c.lng() <= BERLIN_BOUNDS.east  && c.lng() >= BERLIN_BOUNDS.west;
+  if (!inside && zoom <= DIVAGUE_MAX_ZOOM){
+    if (!divagueShown){ divagueShown = true; document.getElementById("divagueOverlay").classList.add("show"); }
+  } else {
+    divagueShown = false; // repasse à l'affût si on ressort à nouveau plus tard
+  }
 }
 function burstConfetti(){
   const colors = ['#CCFF00','#ffffff','#4d7cff','#ff6b6b','#ffcc00'];

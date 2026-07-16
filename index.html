@@ -306,6 +306,14 @@ input#sunSlider::-webkit-slider-thumb{
 .egg-sub{ font-size:13px; color:#c8c8c8; margin-top:4px; }
 .confetti{ position:fixed; top:-10px; z-index:210; border-radius:2px; pointer-events:none; }
 
+/* ============ EASTER EGG "TU DIVAGUES" (sorti de Berlin) ============ */
+#divagueOverlay{ position:fixed; inset:0; z-index:205; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.82); backdrop-filter:blur(8px); padding:24px; }
+#divagueOverlay.show{ display:flex; }
+.divague-card{ text-align:center; max-width:420px; animation: eggPop .45s cubic-bezier(.34,1.56,.64,1); }
+.divague-title{ font-size:23px; font-weight:800; color:#fff; margin-bottom:16px; line-height:1.3; }
+.divague-gif{ width:100%; max-width:340px; border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.5); border:1.5px solid rgba(255,255,255,.12); }
+.divague-sub{ font-size:13px; color:#c8c8c8; margin-top:16px; }
+
 /* setup screen */
 #setup{ position:fixed; inset:0; z-index:900; background:#111; display:none; align-items:center; justify-content:center; padding:24px; }
 #setup.show{ display:flex; }
@@ -422,7 +430,15 @@ input#sunSlider::-webkit-slider-thumb{
   </div>
 </div>
 
-<script src="data.js?v=20260715a"></script>
-<script src="app.js?v=20260715a"></script>
+<div id="divagueOverlay">
+  <div class="divague-card">
+    <div class="divague-title">Humm... tu divagues un peu ?</div>
+    <img class="divague-gif" src="img/divague.gif" alt="">
+    <div class="divague-sub">Doucement sur la conso, Sandrine 👀</div>
+  </div>
+</div>
+
+<script src="data.js?v=20260716a"></script>
+<script src="app.js?v=20260716a"></script>
 </body>
 </html>
