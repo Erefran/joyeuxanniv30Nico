@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260714g"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260715a"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -178,7 +178,8 @@ function initApp(){
   for (const id of Object.keys(PLACES)){
     const p = PLACES[id];
     const pos = markerOffsets[id] || p;
-    const mk = new HTMLMarker(new google.maps.LatLng(pos.lat, pos.lng), pinHTML(p, null, "option", fi++), () => openSheet(id));
+    const onClick = p.popup ? () => showMapPopup(p, p.popup) : () => openSheet(id);
+    const mk = new HTMLMarker(new google.maps.LatLng(pos.lat, pos.lng), pinHTML(p, null, "option", fi++), onClick);
     mk.setMap(map);
     markers[id] = mk;
   }
@@ -198,7 +199,7 @@ function initApp(){
     if (!previewing){ currentMinutes = nowMinutes(); applyTime(currentMinutes, false); }
   }, 60000);
 
-  document.getElementById("map").addEventListener("click", closeSheet);
+  document.getElementById("map").addEventListener("click", () => { closeSheet(); closeMapPopup(); });
 
   document.getElementById("app_ready") || (function(){})();
   document.getElementById("loader").classList.add("hide");
@@ -702,6 +703,37 @@ function bumpReaction(id, emoji){
 }
 
 /* ================================================================
+   POPUP CARTE — bulle légère ancrée sur un pin (easter eggs), plus
+   simple qu'un sheet complet : un tap ailleurs la referme.
+   ================================================================ */
+let currentMapPopup = null;
+
+function showMapPopup(place, html){
+  closeSheet();
+  closeMapPopup();
+  const div = document.createElement("div");
+  div.className = "map-popup";
+  div.innerHTML = `<div class="map-popup-card">${html}</div><div class="map-popup-tip"></div>`;
+  div.addEventListener("click", e => e.stopPropagation());
+
+  const ov = new google.maps.OverlayView();
+  ov.onAdd = function(){ this.getPanes().floatPane.appendChild(div); };
+  ov.draw = function(){
+    const proj = this.getProjection(); if (!proj) return;
+    const p = proj.fromLatLngToDivPixel(new google.maps.LatLng(place.lat, place.lng));
+    if (p){ div.style.left = p.x + "px"; div.style.top = (p.y - 16) + "px"; }
+  };
+  ov.onRemove = function(){ div.remove(); };
+  ov.setMap(map);
+
+  currentMapPopup = ov;
+  map.panTo({ lat: place.lat, lng: place.lng });
+}
+function closeMapPopup(){
+  if (currentMapPopup){ currentMapPopup.setMap(null); currentMapPopup = null; }
+}
+
+/* ================================================================
    BOTTOM SHEET — card façon Google Maps
    ================================================================ */
 let openPlaceId = null;
@@ -746,6 +778,7 @@ function toggleHours(id){
 }
 
 function openSheet(id){
+  closeMapPopup();
   openPlaceId = id;
   const p = PLACES[id];
   clearItinLines();

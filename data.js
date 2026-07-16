@@ -91,7 +91,18 @@ const PLACES = {
   markthalle: { name:"Markthalle Neun", emoji:"🍜", cat:"restaurant", lat:52.502135, lng:13.4315988, pid:"ChIJvaZWgElOqEcRElWjL2P9AZg",
     desc:"Halle de 1891, stands de bouffe du monde entier. Chacun son stand, tout le monde est content.", why:"Une des dernières halles de marché historiques encore en activité à Berlin." },
   tempelhof: { name:"Tempelhofer Feld", emoji:"🖼️", cat:"culture", lat:52.4748569, lng:13.4005926, pid:"ChIJ65nY9-hPqEcRi3G7rJmOiYg",
-    desc:"Un aéroport devenu le plus grand parc urbain d'Europe. Pique-nique sur la piste d'atterrissage.", why:"C'est ici qu'a atterri le Pont aérien de Berlin en 1948-49 — un des épisodes les plus dingues de la Guerre Froide, quand les Alliés ravitaillaient la ville par avion jour et nuit." }
+    desc:"Un aéroport devenu le plus grand parc urbain d'Europe. Pique-nique sur la piste d'atterrissage.", why:"C'est ici qu'a atterri le Pont aérien de Berlin en 1948-49 — un des épisodes les plus dingues de la Guerre Froide, quand les Alliés ravitaillaient la ville par avion jour et nuit." },
+
+  /* ===== Easter eggs — cat "secret" : jamais estompés par l'heure, jamais dans
+     le Programme, visibles seulement en Explorer > Tout ===== */
+  policestation: { name:"Centre officiel de récupération de Nicolas (after party)", emoji:"👮", cat:"secret", lat:52.5219, lng:13.4132, pid:null,
+    desc:"Polizeipräsidium, Alexanderplatz, 10178 Berlin. Si quelqu'un manque à l'appel après une nuit un peu trop réussie, c'est probablement ici qu'il faut commencer à chercher.", why:"On ne sait jamais avec ce groupe." },
+  onepiece: { name:"Le trésor de One Piece", emoji:"🏴‍☠️", cat:"secret", lat:52.5010, lng:13.4450, pid:null,
+    popup:"🏴‍☠️<br><b>Yohoho !</b><br>Le vrai trésor, c'était les clubs qu'on a fermés en chemin." },
+  hospital: { name:"Mise à jour Nico", emoji:"🏥", cat:"secret", lat:52.5259, lng:13.3778, pid:null,
+    popup:"💀<br><b>Version 30.0 installée</b><br>Correctifs de NicoBIOS : Dos légèrement plus fragile, plus de sagesse, toujours autant de conneries." },
+  savepoint: { name:"Point de sauvegarde", emoji:"💾", cat:"secret", lat:52.5145, lng:13.3501, pid:null,
+    popup:"<b>💾 Sauvegarde en cours…</b><br><br>Nom : Nico le dingo<br>Classe : Techno Mage<br>PV : 72%<br>Mana : 12%<br>Charisme : 98<br>Fatigue : Incalculable<br>Inventaire : ✅ Portable ✅ Clés ✅ Carte bancaire ✅ chargeur oublié ✅ 3 tickets BGV<br>Statut : Boss de fin de weekend" }
 };
 
 /* ================================================================
@@ -102,7 +113,7 @@ const PLACES = {
 const PROGRAM = {
   ven: [
     { label:"Atterrissage", options:[{id:"airport", validated:true}] },
-    { label:"Brunch", options:[{id:"spreegold"},{id:"oday"},{id:"distrikt"}] },
+    { label:"Brunch", options:[{id:"spreegold", validated:true}] },
     { label:"Street art", options:[{id:"schwarzenberg", validated:true}] },
     { label:"Un verre", options:[{id:"cafecinema", validated:true}] },
     { label:"Coucher de soleil", options:[{id:"klunker", validated:true},{id:"holzmarkt"}] },
