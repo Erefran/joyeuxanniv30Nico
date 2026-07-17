@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260716b"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260716d"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -839,7 +839,7 @@ function openSheet(id){
       ${reactEmojis.map(e => `<button class="react-btn" onclick="reactClick('${id}','${e}')">${e}${react[e]?`<span class="react-count">${react[e]}</span>`:""}</button>`).join("")}
     </div>
     <div class="actions">
-      <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}" target="_blank" rel="noopener">Google Maps ↗</a>
+      <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}">Google Maps ↗</a>
       <button class="btn btn-ghost btn-reaction" onclick="addPhoto('${id}')">📸 Souvenir</button>
     </div>
   `;
@@ -883,7 +883,10 @@ function openSheet(id){
       ph.appendChild(div);
     });
     if (!d.photos || !d.photos.length) ph.innerHTML = `<div class="photo loaded" style="display:flex;align-items:center;justify-content:center;font-size:34px;">${p.emoji}</div>`;
-    if (openPlaceId === id) openSheetToContent(); // le contenu a grandi (adresse, statut...), on réajuste la hauteur
+    // Ne réajuste la hauteur que si on n'a pas encore commencé à scroller le contenu —
+    // sinon un chargement tardif (photos/horaires) recale la card pendant qu'on lit,
+    // ce qui donne l'impression qu'elle "revient en haut" toute seule.
+    if (openPlaceId === id && document.getElementById("sheetScroll").scrollTop === 0) openSheetToContent();
   };
   if (detailCache[p.pid]) return applyDetails(detailCache[p.pid]);
   placesSvc.getDetails({ placeId:p.pid, fields:["photos","rating","user_ratings_total","opening_hours","formatted_address","price_level"] }, (d, status) => {
