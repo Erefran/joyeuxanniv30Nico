@@ -3,7 +3,6 @@
    ================================================================ */
 console.log("BLN30 build 20260716d"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
-const GDRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1RxVAXWMEh_9DbSUditCraJ2kVvSNpx36?usp=sharing";
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
 
 const DAY_START = 7 * 60;         // 07:00 — bascule en mode clair
@@ -257,7 +256,6 @@ function bindUI(){
     applyTime(currentMinutes, true);
     if (closePanel) sunPanel.classList.remove("open");
   }
-  document.getElementById("photoBtn").addEventListener("click", () => addPhoto());
   sunBtn.addEventListener("click", () => {
     const isOpen = sunPanel.classList.contains("open");
     if (isOpen){
@@ -848,7 +846,6 @@ function openSheet(id){
     </div>
     <div class="actions">
       <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}">Google Maps ↗</a>
-      <button class="btn btn-ghost btn-reaction" onclick="addPhoto('${id}')">📸 Souvenir</button>
     </div>
   `;
   document.getElementById("sheetScroll").scrollTop = 0;
@@ -908,11 +905,6 @@ function reactClick(id, emoji){
   openSheet(id); // re-render pour mettre à jour les compteurs
   toast(`${emoji} ajouté !`);
 }
-function addPhoto(id){
-  if (GDRIVE_FOLDER_URL) window.open(GDRIVE_FOLDER_URL, "_blank");
-  else toast("📁 Dossier Drive pas encore connecté — bientôt !");
-}
-
 /* ================================================================
    TOAST
    ================================================================ */

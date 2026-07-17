@@ -104,9 +104,9 @@ demander à l'utilisatrice l'état à jour plutôt que de supposer.
       portion réellement visible à l'écran (`_sheetH`), donc le scroll interne se bloquait avant
       la fin réelle du contenu. Fix : `setH()` (app.js) clamp désormais `sheetScroll.style.maxHeight`
       sur `_sheetH - sheetHeader.offsetHeight` à chaque changement de hauteur (drag ou snap).
-- [x] **Lien Google Drive partagé** pour les photos souvenirs — `GDRIVE_FOLDER_URL` renseigné
-      dans `app.js`. Ajout d'un bouton 📸 plus visible en haut à droite de la topbar (bulle
-      acide) en plus du bouton "📸 Souvenir" déjà présent dans chaque fiche lieu.
+- [x] **Feature photos/Drive retirée** — bouton 📸, lien `GDRIVE_FOLDER_URL`, upload direct via
+      Apps Script (`PHOTO_UPLOAD_URL`) : tout a été annulé et retiré du code à la demande de
+      l'utilisatrice. Pas de trace à réintroduire sans nouvelle demande explicite.
 - [ ] **Vérifier que le fix du swipe/scroll mobile fonctionne réellement** (dernière modif non
       encore confirmée par l'utilisatrice au moment du transfert)
 - [ ] **Photo de Nico** pour l'easter egg Konami — variable `NICO_PHOTO_URL` dans `app.js`,
