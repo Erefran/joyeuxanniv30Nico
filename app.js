@@ -1,7 +1,7 @@
 /* ================================================================
    CONFIG
    ================================================================ */
-console.log("BLN30 build 20260716a"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
+console.log("BLN30 build 20260716b"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
 const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
@@ -784,6 +784,15 @@ function toggleHours(id){
   if (box) box.classList.toggle("open");
 }
 
+/* Format "Maps URLs" officiel de Google (api=1) : c'est celui garanti pour ouvrir
+   l'app native sur iOS/Android si elle est installée (fallback web sinon), contrairement
+   à /maps/place/?q=place_id:... qui reste parfois coincé dans le navigateur. */
+function googleMapsLink(p){
+  const query = p.pid ? encodeURIComponent(p.name) : `${p.lat},${p.lng}`;
+  const placeIdParam = p.pid ? `&query_place_id=${p.pid}` : "";
+  return `https://www.google.com/maps/search/?api=1&query=${query}${placeIdParam}`;
+}
+
 function openSheet(id){
   closeMapPopup();
   openPlaceId = id;
@@ -830,7 +839,7 @@ function openSheet(id){
       ${reactEmojis.map(e => `<button class="react-btn" onclick="reactClick('${id}','${e}')">${e}${react[e]?`<span class="react-count">${react[e]}</span>`:""}</button>`).join("")}
     </div>
     <div class="actions">
-      <a class="btn btn-ghost" style="text-decoration:none;display:block;" href="${p.pid ? `https://www.google.com/maps/place/?q=place_id:${p.pid}` : `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`}" target="_blank" rel="noopener">Google Maps ↗</a>
+      <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}" target="_blank" rel="noopener">Google Maps ↗</a>
       <button class="btn btn-ghost btn-reaction" onclick="addPhoto('${id}')">📸 Souvenir</button>
     </div>
   `;
