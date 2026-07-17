@@ -326,7 +326,8 @@ input#sunSlider::-webkit-slider-thumb{
 /* loader */
 #loader{ position:fixed; inset:0; z-index:1000; background:#0E0E10; color:#F2F2EE; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; transition:opacity .5s ease; }
 #loader.hide{ opacity:0; pointer-events:none; }
-.loader-mark{ width:88px; height:88px; border-radius:22px; background:var(--acid); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; color:#0E0E10; animation:pulse2 1.6s ease-in-out infinite; }
+.loader-mark{ width:88px; height:88px; border-radius:22px; display:flex; align-items:center; justify-content:center; animation:pulse2 1.6s ease-in-out infinite; overflow:hidden; }
+.loader-mark img{ width:100%; height:100%; object-fit:cover; }
 @keyframes pulse2{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 .loader-msg{ font-size:14.5px; color:#B9B9B2; min-height:20px; text-align:center; padding:0 32px; }
 .loader-bar{ width:130px; height:3px; background:#2A2A2E; border-radius:3px; overflow:hidden; }
@@ -337,7 +338,7 @@ input#sunSlider::-webkit-slider-thumb{
 <body>
 
 <div id="loader">
-  <div class="loader-mark">B·30</div>
+  <div class="loader-mark"><img src="icon-512.png" alt="NICO30"></div>
   <div class="loader-msg" id="loaderMsg">On soudoie le videur du Sisyphos…</div>
   <div class="loader-bar"></div>
 </div>
