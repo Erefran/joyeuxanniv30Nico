@@ -790,13 +790,37 @@ function toggleHours(id){
   if (box) box.classList.toggle("open");
 }
 
-/* Format "Maps URLs" officiel de Google (api=1) : c'est celui garanti pour ouvrir
-   l'app native sur iOS/Android si elle est installée (fallback web sinon), contrairement
-   à /maps/place/?q=place_id:... qui reste parfois coincé dans le navigateur. */
+/* Format "Maps URLs" officiel de Google (api=1) : censé ouvrir l'app native via
+   Universal Link sur iOS/Android si installée (fallback web sinon). En pratique
+   sur iOS ce lien reste souvent coincé dans Safari (Universal Links ne se
+   déclenchent pas de façon fiable selon le contexte de tap) — gardé ici comme
+   fallback web pour openInMaps() ci-dessous, qui force l'ouverture via le
+   schéma custom de l'app sur iOS. */
 function googleMapsLink(p){
   const query = p.pid ? encodeURIComponent(p.name) : `${p.lat},${p.lng}`;
   const placeIdParam = p.pid ? `&query_place_id=${p.pid}` : "";
   return `https://www.google.com/maps/search/?api=1&query=${query}${placeIdParam}`;
+}
+
+/* Sur iOS, le schéma custom comgooglemaps:// ouvre l'app direct si elle est
+   installée (contrairement au lien https qui reste souvent dans Safari) ;
+   s'il ne se passe rien (app absente), on retombe sur le lien web après un
+   court délai. Android gère déjà très bien le lien https api=1 tout seul. */
+function openInMaps(e, id){
+  if (!/iP(hone|ad|od)/.test(navigator.userAgent)) return true;
+  e.preventDefault();
+  const p = PLACES[id];
+  const webUrl = googleMapsLink(p);
+  const q = p.pid ? p.name : `${p.lat},${p.lng}`;
+  let left = false;
+  const onHide = () => { left = true; };
+  document.addEventListener("visibilitychange", onHide, { once:true });
+  window.location.href = `comgooglemaps://?q=${encodeURIComponent(q)}`;
+  setTimeout(() => {
+    document.removeEventListener("visibilitychange", onHide);
+    if (!left) window.location.href = webUrl;
+  }, 1200);
+  return false;
 }
 
 function openSheet(id){
@@ -845,7 +869,7 @@ function openSheet(id){
       ${reactEmojis.map(e => `<button class="react-btn" onclick="reactClick('${id}','${e}')">${e}${react[e]?`<span class="react-count">${react[e]}</span>`:""}</button>`).join("")}
     </div>
     <div class="actions">
-      <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}">Google Maps ↗</a>
+      <a class="btn btn-ghost" style="display:block;" href="${googleMapsLink(p)}" onclick="return openInMaps(event,'${id}')">Google Maps ↗</a>
     </div>
   `;
   document.getElementById("sheetScroll").scrollTop = 0;
