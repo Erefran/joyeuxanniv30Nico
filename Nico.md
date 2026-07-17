@@ -99,12 +99,18 @@ demander à l'utilisatrice l'état à jour plutôt que de supposer.
 
 ## TODO — à reprendre avec Claude Code
 
-- [ ] **Vérifier que le fix du swipe mobile fonctionne réellement** (dernière modif non
+- [x] **Fix scroll bottom sheet mobile** — `.sheet-scroll` (flex:1) se dimensionnait sur les
+      100vh entiers du `#sheet` (hauteur fixe, translateY gère juste le reveal) au lieu de la
+      portion réellement visible à l'écran (`_sheetH`), donc le scroll interne se bloquait avant
+      la fin réelle du contenu. Fix : `setH()` (app.js) clamp désormais `sheetScroll.style.maxHeight`
+      sur `_sheetH - sheetHeader.offsetHeight` à chaque changement de hauteur (drag ou snap).
+- [x] **Lien Google Drive partagé** pour les photos souvenirs — `GDRIVE_FOLDER_URL` renseigné
+      dans `app.js`. Ajout d'un bouton 📸 plus visible en haut à droite de la topbar (bulle
+      acide) en plus du bouton "📸 Souvenir" déjà présent dans chaque fiche lieu.
+- [ ] **Vérifier que le fix du swipe/scroll mobile fonctionne réellement** (dernière modif non
       encore confirmée par l'utilisatrice au moment du transfert)
 - [ ] **Photo de Nico** pour l'easter egg Konami — variable `NICO_PHOTO_URL` dans `app.js`,
       actuellement vide (placeholder emoji + lunettes SVG utilisé en attendant)
-- [ ] **Lien Google Drive partagé** pour les photos souvenirs — variable `GDRIVE_FOLDER_URL`
-      dans `app.js`, actuellement vide (bouton affiche un toast "pas encore connecté")
 - [ ] **Lieu caché insolite** (easter egg supplémentaire, pas de la bouffe) — pas encore décidé,
       pas encore intégré au code
 - [ ] **Infos/bulles historiques enrichies** avec illustrations — pour l'instant seulement du
