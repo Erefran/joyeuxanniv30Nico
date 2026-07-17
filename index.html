@@ -152,6 +152,8 @@ img{-webkit-user-drag:none;}
 .title{ flex:1; padding:11px 16px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; }
 .title .dot{ width:7px; height:7px; border-radius:50%; background:var(--acid); box-shadow:0 0 8px var(--acid); flex-shrink:0; }
 .iconbtn{ width:41px; height:41px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+#photoBtn{ background:var(--acid); box-shadow:0 0 14px var(--acid-dim); font-size:18px; }
+#photoBtn:active{ transform:scale(.92); }
 .chips{ display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; }
 .chips::-webkit-scrollbar{display:none;}
 .chip{ padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
@@ -221,7 +223,7 @@ input#sunSlider::-webkit-slider-thumb{
 #sheetHeader:active{ cursor:grabbing; }
 .grab-zone{ padding:12px 0 10px; display:flex; justify-content:center; }
 .grab{ width:38px; height:4px; border-radius:4px; background:var(--glass-brd); }
-.sheet-scroll{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:0 20px 24px; }
+.sheet-scroll{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; overscroll-behavior-y:contain; padding:0 20px 24px; }
 
 .peek-row{ display:flex; align-items:center; gap:12px; padding:8px 20px 4px; position:relative; }
 .peek-emoji{ font-size:32px; }
@@ -362,6 +364,7 @@ input#sunSlider::-webkit-slider-thumb{
 <div id="topbar">
   <div class="row glass pill" style="padding:5px;">
     <div class="title"><span class="dot"></span><span id="titleText">Vendredi</span></div>
+    <button class="iconbtn" id="photoBtn" title="Ajouter une photo souvenir">📸</button>
     <button class="iconbtn" id="sunBtn">🌙</button>
   </div>
   <div id="sunPanel" class="glass" style="border-radius:20px;">

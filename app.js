@@ -3,7 +3,7 @@
    ================================================================ */
 console.log("BLN30 build 20260716d"); // sert à vérifier dans la console qu'on n'est pas sur une version en cache
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjbBuou1tQQ3b4xxG3lOVl5hsDNuCCdEo";
-const GDRIVE_FOLDER_URL = "";     // ⬅️ colle ici le lien du dossier Drive partagé quand il existe
+const GDRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1RxVAXWMEh_9DbSUditCraJ2kVvSNpx36?usp=sharing";
 const NICO_PHOTO_URL = "";        // ⬅️ colle ici l'URL d'une photo de Nico pour l'easter egg Konami
 
 const DAY_START = 7 * 60;         // 07:00 — bascule en mode clair
@@ -257,6 +257,7 @@ function bindUI(){
     applyTime(currentMinutes, true);
     if (closePanel) sunPanel.classList.remove("open");
   }
+  document.getElementById("photoBtn").addEventListener("click", () => addPhoto());
   sunBtn.addEventListener("click", () => {
     const isOpen = sunPanel.classList.contains("open");
     if (isOpen){
@@ -279,6 +280,7 @@ function bindUI(){
   // sheet drag — toute la zone d'en-tête (poignée + emoji/titre/note) sert de prise,
   // pas juste la petite barre du haut (trop dure à viser au doigt sur mobile).
   const sheet = document.getElementById("sheet"), sheetHeader = document.getElementById("sheetHeader"), backdrop = document.getElementById("backdrop");
+  const sheetScrollEl = document.getElementById("sheetScroll");
   let dragging=false, startY=0, startH=0;
   const PEEK=()=>window.innerHeight*0.5, FULL=()=>window.innerHeight*0.86;
   window._sheetH = 0;
@@ -288,6 +290,12 @@ function bindUI(){
     sheet.classList.toggle("animate", !!anim);
     sheet.style.transform = `translateY(${window.innerHeight - window._sheetH}px)`;
     backdrop.classList.toggle("show", window._sheetH > 10);
+    // #sheet garde une hauteur fixe de 100vh (translateY gère le reveal, voir CSS) —
+    // sans ce clamp, .sheet-scroll (flex:1) se dimensionne sur les 100vh entiers au
+    // lieu de la portion réellement visible (_sheetH), donc son scroll interne pense
+    // avoir plus de place à l'écran qu'il n'y en a vraiment et se bloque avant la fin
+    // du contenu (impossible de scroller jusqu'au bout sur mobile).
+    sheetScrollEl.style.maxHeight = Math.max(0, window._sheetH - sheetHeader.offsetHeight) + "px";
   }
   window._setSheetH = setH; window._PEEK = PEEK; window._FULL = FULL;
   function dragStart(y){ dragging=true; startY=y; startH=window._sheetH; sheet.classList.remove("animate"); }
